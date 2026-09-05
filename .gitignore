@@ -1,0 +1,15 @@
+.DS_Store
+docs/superpowers/
+mockup/
+
+.gradle/
+.gradle-cache/
+build/
+out/
+.env
+
+*.iml
+.idea/
+
+logs/
+*.log
