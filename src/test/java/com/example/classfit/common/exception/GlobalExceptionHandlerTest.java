@@ -25,7 +25,7 @@ class GlobalExceptionHandlerTest {
     private MockMvc mockMvc;
 
     @Test
-    void BusinessException을_정의된_에러_응답으로_변환한다() throws Exception {
+    void convertsBusinessExceptionToDefinedErrorResponse() throws Exception {
         mockMvc.perform(get("/test/business-exception"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
@@ -36,7 +36,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void 처리하지_못한_예외는_서버_내부_오류로_변환한다() throws Exception {
+    void convertsUnhandledExceptionToInternalServerErrorResponse() throws Exception {
         mockMvc.perform(get("/test/unexpected-exception"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.success").value(false))
@@ -48,7 +48,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void 존재하지_않는_경로는_NotFound_응답으로_변환한다() throws Exception {
+    void convertsMissingResourceToNotFoundResponse() throws Exception {
         mockMvc.perform(get("/does-not-exist"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
@@ -59,7 +59,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void 읽을_수_없는_JSON은_InvalidRequest_응답으로_변환한다() throws Exception {
+    void convertsUnreadableJsonToInvalidRequestResponse() throws Exception {
         mockMvc.perform(post("/test/body")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"value\":"))
