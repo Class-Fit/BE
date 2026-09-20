@@ -18,6 +18,13 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
 
+    /** 세션의 내부 회원 ID로 최신 회원을 조회하며 삭제된 회원은 404로 처리한다. */
+    public Member findById(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new com.example.classfit.common.exception.BusinessException(
+                        com.example.classfit.member.exception.MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
     /**
      * 소셜 식별자가 이미 등록되어 있으면 기존 회원을 반환하고,
      * 처음 보는 식별자이면 일반 회원을 생성한다.
