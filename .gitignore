@@ -4,9 +4,11 @@ mockup/
 
 .gradle/
 .gradle-cache/
+.gradle-user-home/
 build/
 out/
 .env
+src/main/resources/application-local.yaml
 
 *.iml
 .idea/
