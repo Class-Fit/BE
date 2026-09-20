@@ -25,11 +25,13 @@ public class CustomOAuth2UserService
     private final MemberService memberService;
     private final OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate;
 
+    /** 운영에서는 Spring의 기본 사용자 정보 HTTP 클라이언트를 사용한다. */
     @Autowired
     public CustomOAuth2UserService(MemberService memberService) {
         this(memberService, new DefaultOAuth2UserService());
     }
 
+    /** 사용자 정보 조회 구현을 주입받아 외부 요청과 회원 연결 책임을 분리한다. */
     CustomOAuth2UserService(
             MemberService memberService,
             OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate
@@ -50,10 +52,9 @@ public class CustomOAuth2UserService
             throw new OAuth2AuthenticationException(error, "지원하지 않는 OAuth 제공자입니다.");
         }
 
-        OAuth2User providerUser = delegate.loadUser(userRequest);
-        KakaoOAuth2UserInfo userInfo = new KakaoOAuth2UserInfo(providerUser.getAttributes());
-        // 응답 검증 실패와 DB 저장 실패 모두 OAuth 실패 처리기로 전달한다.
         try {
+            OAuth2User providerUser = delegate.loadUser(userRequest);
+            KakaoOAuth2UserInfo userInfo = new KakaoOAuth2UserInfo(providerUser.getAttributes());
             Member member = memberService.findOrCreate(
                     OAuthProvider.KAKAO,
                     userInfo.getProviderId(),
@@ -62,6 +63,9 @@ public class CustomOAuth2UserService
                     userInfo.getGender()
             );
             return LoginMember.from(member);
+        } catch (IllegalArgumentException exception) {
+            throw new OAuth2AuthenticationException(new OAuth2Error("invalid_user_info"),
+                    "카카오 사용자 정보를 확인할 수 없습니다.", exception);
         } catch (org.springframework.dao.DataAccessException exception) {
             throw new OAuth2AuthenticationException(new OAuth2Error("member_link_failed"),
                     "회원 연결에 실패했습니다.", exception);
