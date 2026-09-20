@@ -1,0 +1,164 @@
+package com.example.classfit.chatbot.service;
+
+import com.example.classfit.chatbot.domain.ChatMessage;
+import com.example.classfit.chatbot.domain.Conversation;
+import com.example.classfit.chatbot.domain.enums.ChatRole;
+import com.example.classfit.chatbot.dto.req.ChatMessageReq;
+import com.example.classfit.chatbot.dto.res.ChatMessageListRes;
+import com.example.classfit.chatbot.dto.res.ChatMessageRes;
+import com.example.classfit.chatbot.dto.res.ConversationCreateRes;
+import com.example.classfit.chatbot.dto.res.ConversationListRes;
+import com.example.classfit.chatbot.exception.ChatbotErrorCode;
+import com.example.classfit.chatbot.repository.ChatMessageRepository;
+import com.example.classfit.chatbot.repository.ConversationRepository;
+import com.example.classfit.common.exception.BusinessException;
+import com.example.classfit.member.domain.Member;
+import com.example.classfit.member.repository.MemberRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class ChatServiceImpl implements ChatService {
+
+    private final ConversationRepository conversationRepository;
+    private final MemberRepository memberRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final AiService aiService;
+
+    @Override
+    @Transactional
+    public ConversationCreateRes createConversation(Long memberId) {
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() ->
+                        new BusinessException(ChatbotErrorCode.MEMBER_NOT_FOUND));
+
+        Conversation conversation = Conversation.builder()
+                .member(member)
+                .title("새로운 대화")
+                .build();
+
+        Conversation savedConversation =
+                conversationRepository.save(conversation);
+
+        return new ConversationCreateRes(
+                savedConversation.getId(),
+                savedConversation.getTitle()
+        );
+    }
+
+    @Override
+    @Transactional
+    public ChatMessageRes sendMessage(
+            Long memberId,
+            Long conversationId,
+            ChatMessageReq request
+    ) {
+
+        // 채팅방 조회
+        Conversation conversation = conversationRepository
+                .findById(conversationId)
+                .orElseThrow(() ->
+                        new BusinessException(
+                                ChatbotErrorCode.CONVERSATION_NOT_FOUND
+                        )
+                );
+
+        // 본인의 채팅방인지 확인
+        if (!conversation.getMember().getId().equals(memberId)) {
+            throw new BusinessException(
+                    ChatbotErrorCode.CONVERSATION_ACCESS_DENIED
+            );
+        }
+
+        // USER 메시지 저장
+        ChatMessage userMessage = ChatMessage.builder()
+                .conversation(conversation)
+                .role(ChatRole.USER)
+                .content(request.content())
+                .build();
+
+        chatMessageRepository.save(userMessage);
+
+        // 지금까지의 대화 조회
+        List<ChatMessage> messages =
+                chatMessageRepository
+                        .findAllByConversationIdOrderByCreatedAtAsc(
+                                conversationId
+                        );
+
+        // GPT 호출
+        String aiResponse =
+                aiService.generateResponse(messages);
+
+        // GPT 응답 저장
+        ChatMessage assistantMessage = ChatMessage.builder()
+                .conversation(conversation)
+                .role(ChatRole.ASSISTANT)
+                .content(aiResponse)
+                .build();
+
+        ChatMessage savedAssistant =
+                chatMessageRepository.save(assistantMessage);
+
+        // GPT 응답 반환
+        return new ChatMessageRes(
+                savedAssistant.getId(),
+                savedAssistant.getRole(),
+                savedAssistant.getContent()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ConversationListRes> getConversations(Long memberId) {
+
+        return conversationRepository
+                .findAllByMemberIdOrderByCreatedAtDesc(memberId)
+                .stream()
+                .map(conversation -> new ConversationListRes(
+                        conversation.getId(),
+                        conversation.getTitle(),
+                        conversation.getCreatedAt()
+                ))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ChatMessageListRes> getMessages(
+            Long memberId,
+            Long conversationId
+    ) {
+
+        Conversation conversation = conversationRepository
+                .findById(conversationId)
+                .orElseThrow(() ->
+                        new BusinessException(
+                                ChatbotErrorCode.CONVERSATION_NOT_FOUND
+                        )
+                );
+
+        if (!conversation.getMember().getId().equals(memberId)) {
+            throw new BusinessException(
+                    ChatbotErrorCode.CONVERSATION_ACCESS_DENIED
+            );
+        }
+
+        return chatMessageRepository
+                .findAllByConversationIdOrderByCreatedAtAsc(conversationId)
+                .stream()
+                .map(message -> new ChatMessageListRes(
+                        message.getId(),
+                        message.getRole(),
+                        message.getContent(),
+                        message.getCreatedAt()
+                ))
+                .toList();
+    }
+}

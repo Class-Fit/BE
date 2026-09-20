@@ -37,7 +37,8 @@ jobs:
       # 현재는 별도 프로필 없이 H2 의존성으로 인메모리 DB가 자동 구성된다.
       - name: 빌드 및 테스트
         run: ./gradlew build --no-daemon
-
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       - name: 테스트 리포트 업로드
         if: failure()
         uses: actions/upload-artifact@v4
