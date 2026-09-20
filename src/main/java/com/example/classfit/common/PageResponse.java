@@ -5,11 +5,11 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 
 public record PageResponse<T>(
-        List<T> data,
+        List<T> content,
         int page,
         int size,
         long totalCount,
-        long totalPage,
+        long totalPages,
         boolean first,
         boolean last
 ){
