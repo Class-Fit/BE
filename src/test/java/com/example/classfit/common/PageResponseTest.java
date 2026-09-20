@@ -35,4 +35,22 @@ public class PageResponseTest {
         assertThat(response.last()).isFalse();
     }
 
+    @Test
+    void convertsEmptyPageToPageResponse() {
+        // given
+        Page<String> page = Page.empty(PageRequest.of(0, 20));
+
+        // when
+        PageResponse<String> response = PageResponse.from(page);
+
+        // then
+        assertThat(response.content()).isEmpty();
+        assertThat(response.page()).isZero();
+        assertThat(response.size()).isEqualTo(20);
+        assertThat(response.totalCount()).isZero();
+        assertThat(response.totalPages()).isZero();
+        assertThat(response.first()).isTrue();
+        assertThat(response.last()).isTrue();
+    }
+
 }
