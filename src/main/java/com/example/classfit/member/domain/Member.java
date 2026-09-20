@@ -30,13 +30,11 @@ public class Member extends BaseEntity {
     @Column(name = "provider_id", nullable = false, length = 100)
     private String providerId;
 
-    @Column(nullable = false, length = 40)
+    @Column(length = 40)
     private String name;
 
-    @Column(nullable = false)
     private String email;
 
-    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
@@ -44,10 +42,29 @@ public class Member extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private MemberRole role;
 
-    @Column(nullable = false)
-    private long height;
+    private Long height;
 
-    @Column(nullable = false)
-    private long weight;
+    private Long weight;
+
+    /**
+     * 처음 로그인한 소셜 계정을 일반 회원으로 생성한다.
+     * 제공자가 전달하지 않을 수 있는 프로필 값은 null을 허용한다.
+     */
+    public static Member createOAuthMember(
+            OAuthProvider provider,
+            String providerId,
+            String name,
+            String email,
+            Gender gender
+    ) {
+        Member member = new Member();
+        member.provider = provider;
+        member.providerId = providerId;
+        member.name = name;
+        member.email = email;
+        member.gender = gender;
+        member.role = MemberRole.USER;
+        return member;
+    }
 
 }
