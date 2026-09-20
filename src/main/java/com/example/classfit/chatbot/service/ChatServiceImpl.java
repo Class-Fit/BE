@@ -28,6 +28,7 @@ public class ChatServiceImpl implements ChatService {
     private final ConversationRepository conversationRepository;
     private final MemberRepository memberRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final AiService aiService;
 
     @Override
     @Transactional
@@ -59,31 +60,57 @@ public class ChatServiceImpl implements ChatService {
             ChatMessageReq request
     ) {
 
-        Conversation conversation = conversationRepository.findById(conversationId)
+        // 채팅방 조회
+        Conversation conversation = conversationRepository
+                .findById(conversationId)
                 .orElseThrow(() ->
                         new BusinessException(
                                 ChatbotErrorCode.CONVERSATION_NOT_FOUND
                         )
                 );
 
+        // 본인의 채팅방인지 확인
         if (!conversation.getMember().getId().equals(memberId)) {
             throw new BusinessException(
                     ChatbotErrorCode.CONVERSATION_ACCESS_DENIED
             );
         }
 
+        // USER 메시지 저장
         ChatMessage userMessage = ChatMessage.builder()
                 .conversation(conversation)
                 .role(ChatRole.USER)
                 .content(request.content())
                 .build();
 
-        ChatMessage savedMessage =
-                chatMessageRepository.save(userMessage);
+        chatMessageRepository.save(userMessage);
 
+        // 지금까지의 대화 조회
+        List<ChatMessage> messages =
+                chatMessageRepository
+                        .findAllByConversationIdOrderByCreatedAtAsc(
+                                conversationId
+                        );
+
+        // GPT 호출
+        String aiResponse =
+                aiService.generateResponse(messages);
+
+        // GPT 응답 저장
+        ChatMessage assistantMessage = ChatMessage.builder()
+                .conversation(conversation)
+                .role(ChatRole.ASSISTANT)
+                .content(aiResponse)
+                .build();
+
+        ChatMessage savedAssistant =
+                chatMessageRepository.save(assistantMessage);
+
+        // GPT 응답 반환
         return new ChatMessageRes(
-                savedMessage.getId(),
-                savedMessage.getContent()
+                savedAssistant.getId(),
+                savedAssistant.getRole(),
+                savedAssistant.getContent()
         );
     }
 

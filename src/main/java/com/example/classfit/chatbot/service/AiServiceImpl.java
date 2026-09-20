@@ -1,11 +1,14 @@
 package com.example.classfit.chatbot.service;
 
+import com.example.classfit.chatbot.domain.ChatMessage;
 import com.openai.client.OpenAIClient;
 import com.openai.models.ChatModel;
 import com.openai.models.responses.Response;
 import com.openai.models.responses.ResponseCreateParams;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -14,11 +17,19 @@ public class AiServiceImpl implements AiService {
     private final OpenAIClient openAIClient;
 
     @Override
-    public String generateResponse(String message) {
+    public String generateResponse(List<ChatMessage> messages) {
+
+        String conversationHistory = messages.stream()
+                .map(message ->
+                        message.getRole().name()
+                                + ": "
+                                + message.getContent()
+                )
+                .reduce("", (a, b) -> a + b + "\n");
 
         ResponseCreateParams params = ResponseCreateParams.builder()
                 .model(ChatModel.GPT_5_2)
-                .input(message)
+                .input(conversationHistory)
                 .build();
 
         Response response =
@@ -26,7 +37,7 @@ public class AiServiceImpl implements AiService {
 
         return response.output().stream()
                 .flatMap(output -> output.message().stream())
-                .flatMap(msg -> msg.content().stream())
+                .flatMap(message -> message.content().stream())
                 .flatMap(content -> content.outputText().stream())
                 .map(text -> text.text())
                 .findFirst()
