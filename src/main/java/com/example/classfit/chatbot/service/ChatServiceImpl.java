@@ -6,6 +6,7 @@ import com.example.classfit.chatbot.exception.ChatbotErrorCode;
 import com.example.classfit.chatbot.repository.ConversationRepository;
 import com.example.classfit.common.exception.BusinessException;
 import com.example.classfit.member.domain.Member;
+import com.example.classfit.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
