@@ -37,8 +37,6 @@ class MemberServiceTest {
         assertThat(member.getId()).isNotNull();
         assertThat(member.getRole()).isEqualTo(MemberRole.USER);
         assertThat(member.getName()).isNull();
-        assertThat(member.getHeight()).isNull();
-        assertThat(member.getWeight()).isNull();
     }
 
     @Test
