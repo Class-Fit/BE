@@ -23,6 +23,8 @@ public class SecurityConfig {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/courses", "/api/courses/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/admin/courses/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/members/me").authenticated()
                         .anyRequest().denyAll())
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))

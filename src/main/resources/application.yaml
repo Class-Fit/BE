@@ -1,6 +1,15 @@
 spring:
   application:
     name: classfit
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  h2:
+    console:
+      enabled: true
+
   security:
     oauth2:
       client:
@@ -18,3 +27,12 @@ spring:
             token-uri: https://kauth.kakao.com/oauth/token
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
+
+
+public-data:
+  facility-service-key: ${PUBLIC_DATA_FACILITY_SERVICE_KEY:}
+  course-service-key: ${PUBLIC_DATA_COURSE_SERVICE_KEY:}
+  facility-url: ${PUBLIC_DATA_FACILITY_URL:}
+  course-url: ${PUBLIC_DATA_COURSE_URL:}
+  gangwon-city-code: "51"
+  page-size: 1000
