@@ -1,7 +1,6 @@
 package com.example.classfit.course.service;
 
 import com.example.classfit.course.config.PublicDataProperties;
-import com.example.classfit.course.domain.Course;
 import com.example.classfit.course.domain.Facility;
 import com.example.classfit.course.dto.CourseSyncResponse;
 import com.example.classfit.course.dto.PublicCourseItem;
@@ -9,10 +8,7 @@ import com.example.classfit.course.dto.PublicFacilityItem;
 import com.example.classfit.course.external.PublicDataPage;
 import com.example.classfit.course.external.VoucherCourseApiClient;
 import com.example.classfit.course.external.VoucherFacilityApiClient;
-import com.example.classfit.course.repository.CourseRepository;
-import com.example.classfit.course.repository.FacilityRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,24 +19,20 @@ public class CourseSyncService {
     private final PublicDataProperties properties;
     private final VoucherFacilityApiClient facilityApiClient;
     private final VoucherCourseApiClient courseApiClient;
-    private final FacilityRepository facilityRepository;
-    private final CourseRepository courseRepository;
+    private final CourseSyncPersistenceService persistenceService;
 
     public CourseSyncService(
             PublicDataProperties properties,
             VoucherFacilityApiClient facilityApiClient,
             VoucherCourseApiClient courseApiClient,
-            FacilityRepository facilityRepository,
-            CourseRepository courseRepository
+            CourseSyncPersistenceService persistenceService
     ) {
         this.properties = properties;
         this.facilityApiClient = facilityApiClient;
         this.courseApiClient = courseApiClient;
-        this.facilityRepository = facilityRepository;
-        this.courseRepository = courseRepository;
+        this.persistenceService = persistenceService;
     }
 
-    @Transactional
     public CourseSyncResponse syncGangwonCourses() {
         properties.validateForSync();
         List<Facility> facilities = syncFacilities();
@@ -52,8 +44,7 @@ public class CourseSyncService {
         return new CourseSyncResponse(facilities.size(), savedCourses);
     }
 
-    @Transactional
-    protected List<Facility> syncFacilities() {
+    private List<Facility> syncFacilities() {
         List<Facility> facilities = new ArrayList<>();
         int pageNumber = 1;
 
@@ -64,18 +55,7 @@ public class CourseSyncService {
                     continue;
                 }
 
-                Facility facility = facilityRepository
-                        .findByBusinessRegistrationNumberAndFacilitySerialNumber(
-                                item.businessRegistrationNumber(),
-                                item.facilitySerialNumber()
-                        )
-                        .map(existing -> {
-                            existing.update(item);
-                            return existing;
-                        })
-                        .orElseGet(() -> Facility.from(item));
-
-                facilities.add(facilityRepository.save(facility));
+                facilities.add(persistenceService.upsertFacility(item));
             }
 
             if (page.items().isEmpty() || pageNumber * properties.getPageSize() >= page.totalCount()) {
@@ -85,8 +65,7 @@ public class CourseSyncService {
         }
     }
 
-    @Transactional
-    protected int syncCoursesForFacility(Facility facility) {
+    private int syncCoursesForFacility(Facility facility) {
         int savedCourses = 0;
         int pageNumber = 1;
 
@@ -102,18 +81,11 @@ public class CourseSyncService {
                     continue;
                 }
 
-                Course course = courseRepository
-                        .findByBusinessRegistrationNumberAndCourseNumber(
-                                item.businessRegistrationNumber(),
-                                item.courseNumber()
-                        )
-                        .map(existing -> {
-                            existing.update(facility, item);
-                            return existing;
-                        })
-                        .orElseGet(() -> Course.from(facility, item));
-
-                courseRepository.save(course);
+                persistenceService.upsertCourse(
+                        facility.getBusinessRegistrationNumber(),
+                        facility.getFacilitySerialNumber(),
+                        item
+                );
                 savedCourses++;
             }
 

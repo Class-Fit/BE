@@ -22,8 +22,8 @@ import lombok.NoArgsConstructor;
 @Table(
         name = "courses",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_courses_brno_course_no",
-                columnNames = {"brno", "course_no"}
+                name = "uk_courses_facility_course_no",
+                columnNames = {"facility_id", "course_no"}
         )
 )
 public class Course {
