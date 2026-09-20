@@ -42,10 +42,6 @@ public class Member extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private MemberRole role;
 
-    private Long height;
-
-    private Long weight;
-
     /**
      * 처음 로그인한 소셜 계정을 일반 회원으로 생성한다.
      * 제공자가 전달하지 않을 수 있는 프로필 값은 null을 허용한다.
