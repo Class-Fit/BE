@@ -54,6 +54,8 @@ http://localhost:8080/oauth2/authorization/kakao
 |---|---|
 | `SecurityConfig` | 경로별 접근 정책, 세션 로그인, 성공·실패 응답, 로그아웃 설정 |
 | `CustomOAuth2UserService` | 카카오 사용자 정보 요청을 위임하고 내부 회원과 연결 |
+| `OAuthProviderUserInfo` | 제공자별 사용자 응답을 회원 연결에 필요한 공통 형식으로 정의 |
+| `OAuthProviderUserInfoFactory` | OAuth 등록 이름에 맞는 제공자 응답 변환기를 선택 |
 | `KakaoOAuth2UserInfo` | 카카오 응답의 ID·선택 프로필을 정규화 |
 | `LoginMember` | 세션 principal에 내부 회원 ID와 DB 역할을 보관 |
 | `MemberService` | `findOrCreate`로 신규·기존 계정 처리, `findById`로 내 정보 조회 |
