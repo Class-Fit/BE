@@ -6,6 +6,7 @@ import com.example.classfit.chatbot.domain.enums.ChatRole;
 import com.example.classfit.chatbot.dto.req.ChatMessageReq;
 import com.example.classfit.chatbot.dto.res.ChatMessageRes;
 import com.example.classfit.chatbot.dto.res.ConversationCreateRes;
+import com.example.classfit.chatbot.dto.res.ConversationListRes;
 import com.example.classfit.chatbot.exception.ChatbotErrorCode;
 import com.example.classfit.chatbot.repository.ChatMessageRepository;
 import com.example.classfit.chatbot.repository.ConversationRepository;
@@ -15,6 +16,8 @@ import com.example.classfit.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -82,4 +85,20 @@ public class ChatServiceImpl implements ChatService {
                 savedMessage.getContent()
         );
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ConversationListRes> getConversations(Long memberId) {
+
+        return conversationRepository
+                .findAllByMemberIdOrderByCreatedAtDesc(memberId)
+                .stream()
+                .map(conversation -> new ConversationListRes(
+                        conversation.getId(),
+                        conversation.getTitle(),
+                        conversation.getCreatedAt()
+                ))
+                .toList();
+    }
+
 }
