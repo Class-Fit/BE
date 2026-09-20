@@ -1,6 +1,7 @@
 package com.example.classfit.chatbot.service;
 
 import com.example.classfit.chatbot.dto.req.ChatMessageReq;
+import com.example.classfit.chatbot.dto.res.ChatMessageListRes;
 import com.example.classfit.chatbot.dto.res.ChatMessageRes;
 import com.example.classfit.chatbot.dto.res.ConversationCreateRes;
 import com.example.classfit.chatbot.dto.res.ConversationListRes;
@@ -14,4 +15,6 @@ public interface ChatService {
     ChatMessageRes sendMessage(Long memberId, Long conversationId, ChatMessageReq request);
 
     List<ConversationListRes> getConversations(Long memberId);
+
+    List<ChatMessageListRes> getMessages(Long memberId, Long conversationId);
 }

@@ -1,14 +1,12 @@
 package com.example.classfit.chatbot.controller;
 
+import com.example.classfit.chatbot.dto.res.ChatMessageListRes;
 import com.example.classfit.chatbot.dto.res.ChatMessageRes;
 import com.example.classfit.chatbot.dto.res.ConversationListRes;
 import com.example.classfit.chatbot.service.AiService;
 import com.example.classfit.chatbot.service.ChatService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -30,5 +28,13 @@ public class ChatController {
             @RequestParam Long memberId
     ) {
         return chatService.getConversations(memberId);
+    }
+
+    @GetMapping("/conversations/{conversationId}/messages")
+    public List<ChatMessageListRes> getMessages(
+            @RequestParam Long memberId,
+            @PathVariable Long conversationId
+    ) {
+        return chatService.getMessages(memberId, conversationId);
     }
 }

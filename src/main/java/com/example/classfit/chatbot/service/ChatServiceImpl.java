@@ -4,6 +4,7 @@ import com.example.classfit.chatbot.domain.ChatMessage;
 import com.example.classfit.chatbot.domain.Conversation;
 import com.example.classfit.chatbot.domain.enums.ChatRole;
 import com.example.classfit.chatbot.dto.req.ChatMessageReq;
+import com.example.classfit.chatbot.dto.res.ChatMessageListRes;
 import com.example.classfit.chatbot.dto.res.ChatMessageRes;
 import com.example.classfit.chatbot.dto.res.ConversationCreateRes;
 import com.example.classfit.chatbot.dto.res.ConversationListRes;
@@ -101,4 +102,36 @@ public class ChatServiceImpl implements ChatService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<ChatMessageListRes> getMessages(
+            Long memberId,
+            Long conversationId
+    ) {
+
+        Conversation conversation = conversationRepository
+                .findById(conversationId)
+                .orElseThrow(() ->
+                        new BusinessException(
+                                ChatbotErrorCode.CONVERSATION_NOT_FOUND
+                        )
+                );
+
+        if (!conversation.getMember().getId().equals(memberId)) {
+            throw new BusinessException(
+                    ChatbotErrorCode.CONVERSATION_ACCESS_DENIED
+            );
+        }
+
+        return chatMessageRepository
+                .findAllByConversationIdOrderByCreatedAtAsc(conversationId)
+                .stream()
+                .map(message -> new ChatMessageListRes(
+                        message.getId(),
+                        message.getRole(),
+                        message.getContent(),
+                        message.getCreatedAt()
+                ))
+                .toList();
+    }
 }
