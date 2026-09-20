@@ -1,12 +1,12 @@
 package com.example.classfit.course.service;
 
+import com.example.classfit.common.PageResponse;
 import com.example.classfit.common.exception.BusinessException;
 import com.example.classfit.common.exception.CommonErrorCode;
 import com.example.classfit.course.domain.Course;
 import com.example.classfit.course.dto.CourseDetailResponse;
 import com.example.classfit.course.dto.CourseSearchResponse;
 import com.example.classfit.course.repository.CourseRepository;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,7 @@ public class CourseService {
         this.courseRepository = courseRepository;
     }
 
-    public Page<CourseSearchResponse> searchCourses(
+    public PageResponse<CourseSearchResponse> searchCourses(
             String localCode,
             String sportCode,
             String keyword,
@@ -30,13 +30,14 @@ public class CourseService {
             int size
     ) {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by("id").descending());
-        return courseRepository.search(
+        return PageResponse.from(courseRepository.search(
                         normalize(localCode),
                         normalize(sportCode),
                         normalize(keyword),
                         pageRequest
                 )
-                .map(CourseSearchResponse::from);
+                .map(CourseSearchResponse::from)
+        );
     }
 
     public CourseDetailResponse getCourse(Long courseId) {

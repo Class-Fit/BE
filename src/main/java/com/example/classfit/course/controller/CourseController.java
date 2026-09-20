@@ -1,10 +1,10 @@
 package com.example.classfit.course.controller;
 
 import com.example.classfit.common.ApiResponse;
+import com.example.classfit.common.PageResponse;
 import com.example.classfit.course.dto.CourseDetailResponse;
 import com.example.classfit.course.dto.CourseSearchResponse;
 import com.example.classfit.course.service.CourseService;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,7 +22,7 @@ public class CourseController {
     }
 
     @GetMapping
-    public ApiResponse<Page<CourseSearchResponse>> searchCourses(
+    public ApiResponse<PageResponse<CourseSearchResponse>> searchCourses(
             @RequestParam(required = false) String localCode,
             @RequestParam(required = false) String sportCode,
             @RequestParam(required = false) String keyword,
