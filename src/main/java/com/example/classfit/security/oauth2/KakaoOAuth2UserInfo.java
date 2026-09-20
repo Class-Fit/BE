@@ -16,6 +16,7 @@ public class KakaoOAuth2UserInfo {
 
     private final Map<String, Object> attributes;
 
+    /** 사용자 정보 조회 결과를 받아 필드별 변환을 준비한다. */
     public KakaoOAuth2UserInfo(Map<String, Object> attributes) {
         this.attributes = attributes;
     }
@@ -70,6 +71,7 @@ public class KakaoOAuth2UserInfo {
         return null;
     }
 
+    /** 선택적인 kakao_account 객체가 없으면 빈 객체처럼 취급한다. */
     private Map<?, ?> kakaoAccount() {
         Object account = attributes.get("kakao_account");
         if (account instanceof Map<?, ?> accountMap) {
@@ -78,6 +80,7 @@ public class KakaoOAuth2UserInfo {
         return Map.of();
     }
 
+    /** 비어 있지 않은 문자열만 선택 프로필 값으로 사용한다. */
     private String stringValue(Object value) {
         if (!(value instanceof String text) || text.isBlank()) {
             return null;
@@ -85,6 +88,7 @@ public class KakaoOAuth2UserInfo {
         return text;
     }
 
+    /** 식별자 오류를 OAuth 인증 실패 처리기가 받을 수 있는 예외로 만든다. */
     private OAuth2AuthenticationException invalidUserInfo() {
         OAuth2Error error = new OAuth2Error(INVALID_USER_INFO);
         return new OAuth2AuthenticationException(error, INVALID_USER_INFO);

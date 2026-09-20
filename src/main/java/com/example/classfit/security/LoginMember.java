@@ -24,6 +24,7 @@ public class LoginMember implements OAuth2User, Serializable {
     private final List<GrantedAuthority> authorities;
     private final Map<String, Object> attributes;
 
+    /** 인증에 필요한 값을 복사해 생성 후 변경되지 않도록 한다. */
     private LoginMember(
             Long memberId,
             List<GrantedAuthority> authorities,
@@ -51,11 +52,13 @@ public class LoginMember implements OAuth2User, Serializable {
         return memberId;
     }
 
+    /** OAuth2User 계약에 맞춰 내부 회원 ID만 속성으로 제공한다. */
     @Override
     public Map<String, Object> getAttributes() {
         return attributes;
     }
 
+    /** 로그인 시 DB에서 읽은 역할을 접근 제어에 제공한다. */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;

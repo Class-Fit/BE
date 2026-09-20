@@ -4,6 +4,8 @@ import com.example.classfit.member.domain.Member;
 import com.example.classfit.member.domain.enums.Gender;
 import com.example.classfit.member.domain.enums.OAuthProvider;
 import com.example.classfit.member.repository.MemberRepository;
+import com.example.classfit.common.exception.BusinessException;
+import com.example.classfit.member.exception.MemberErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,8 +23,7 @@ public class MemberService {
     /** 세션의 내부 회원 ID로 최신 회원을 조회하며 삭제된 회원은 404로 처리한다. */
     public Member findById(Long memberId) {
         return memberRepository.findById(memberId)
-                .orElseThrow(() -> new com.example.classfit.common.exception.BusinessException(
-                        com.example.classfit.member.exception.MemberErrorCode.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 
     /**

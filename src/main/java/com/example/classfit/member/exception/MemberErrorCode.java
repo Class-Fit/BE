@@ -14,6 +14,7 @@ public enum MemberErrorCode implements ErrorCode {
     private final HttpStatus status;
     private final String message;
 
+    /** enum 이름을 클라이언트가 구분할 수 있는 오류 코드로 사용한다. */
     @Override
     public String getCode() {
         return name();
