@@ -28,6 +28,12 @@ public class SecurityConfig {
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(entryPoint).accessDeniedHandler(deniedHandler))
+                // POST와 유효한 CSRF 토큰으로만 서비스 세션을 종료한다.
+                .logout(logout -> logout.logoutUrl("/api/auth/logout")
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .deleteCookies("JSESSIONID")
+                        .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)))
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(info -> info.userService(userService))
                         .defaultSuccessUrl("/api/members/me", true)
