@@ -1,8 +1,13 @@
 package com.example.classfit.chatbot.service;
 
+import com.example.classfit.chatbot.domain.ChatMessage;
 import com.example.classfit.chatbot.domain.Conversation;
+import com.example.classfit.chatbot.domain.enums.ChatRole;
+import com.example.classfit.chatbot.dto.req.ChatMessageReq;
+import com.example.classfit.chatbot.dto.res.ChatMessageRes;
 import com.example.classfit.chatbot.dto.res.ConversationCreateRes;
 import com.example.classfit.chatbot.exception.ChatbotErrorCode;
+import com.example.classfit.chatbot.repository.ChatMessageRepository;
 import com.example.classfit.chatbot.repository.ConversationRepository;
 import com.example.classfit.common.exception.BusinessException;
 import com.example.classfit.member.domain.Member;
@@ -18,6 +23,7 @@ public class ChatServiceImpl implements ChatService {
 
     private final ConversationRepository conversationRepository;
     private final MemberRepository memberRepository;
+    private final ChatMessageRepository chatMessageRepository;
 
     @Override
     @Transactional
@@ -38,6 +44,42 @@ public class ChatServiceImpl implements ChatService {
         return new ConversationCreateRes(
                 savedConversation.getId(),
                 savedConversation.getTitle()
+        );
+    }
+
+    @Override
+    @Transactional
+    public ChatMessageRes sendMessage(
+            Long memberId,
+            Long conversationId,
+            ChatMessageReq request
+    ) {
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() ->
+                        new BusinessException(
+                                ChatbotErrorCode.CONVERSATION_NOT_FOUND
+                        )
+                );
+
+        if (!conversation.getMember().getId().equals(memberId)) {
+            throw new BusinessException(
+                    ChatbotErrorCode.CONVERSATION_ACCESS_DENIED
+            );
+        }
+
+        ChatMessage userMessage = ChatMessage.builder()
+                .conversation(conversation)
+                .role(ChatRole.USER)
+                .content(request.content())
+                .build();
+
+        ChatMessage savedMessage =
+                chatMessageRepository.save(userMessage);
+
+        return new ChatMessageRes(
+                savedMessage.getId(),
+                savedMessage.getContent()
         );
     }
 }
