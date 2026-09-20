@@ -1,5 +1,6 @@
 package com.example.classfit.member.domain;
 
+import com.example.classfit.common.BaseEntity;
 import com.example.classfit.member.domain.enums.Gender;
 import com.example.classfit.member.domain.enums.MemberRole;
 import com.example.classfit.member.domain.enums.OAuthProvider;
@@ -20,11 +21,7 @@ import lombok.NoArgsConstructor;
                 )
         }
 )
-public class Member {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Member extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
