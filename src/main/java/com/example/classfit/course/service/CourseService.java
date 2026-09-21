@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** 강좌 동기화 데이터의 검색과 상세 조회 규칙을 담당한다. */
 @Service
 @Transactional(readOnly = true)
 public class CourseService {
@@ -22,6 +23,7 @@ public class CourseService {
         this.courseRepository = courseRepository;
     }
 
+    /** 검색 조건을 정규화하고 최신 등록 순으로 페이지 조회한다. */
     public PageResponse<CourseSearchResponse> searchCourses(
             String localCode,
             String sportCode,
