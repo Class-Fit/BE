@@ -113,6 +113,25 @@ public class InBodyServiceImpl implements InBodyService {
     }
 
     @Override
+    @Transactional
+    public void deleteInBody(Long memberId, Long inBodyId) {
+
+        InBody inBody = inBodyRepository.findById(inBodyId)
+                .orElseThrow(() ->
+                        new BusinessException(
+                                InBodyErrorCode.INBODY_NOT_FOUND
+                        )
+                );
+
+        if (!inBody.getMember().getId().equals(memberId)) {
+            throw new BusinessException(
+                    InBodyErrorCode.INBODY_ACCESS_DENIED
+            );
+        }
+        inBodyRepository.delete(inBody);
+    }
+
+    @Override
     public InBodyAnalyzeRes analyzeInBody(MultipartFile image) {
         validateImage(image);
         try {

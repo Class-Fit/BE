@@ -15,4 +15,6 @@ public interface InBodyService {
     InBodyCreateRes getLatestInBody(Long memberId);
 
     InBodyAnalyzeRes analyzeInBody(MultipartFile image);
+
+    void deleteInBody(Long memberId, Long inBodyId);
 }
