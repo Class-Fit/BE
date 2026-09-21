@@ -1,0 +1,16 @@
+첨부된 이미지는 InBody 체성분 검사 결과지입니다.
+
+다음 6개 측정값만 추출하세요.
+
+- heightCm: 신장(cm)
+- weightKg: 체중(kg)
+- bodyFatPercentage: 체지방률(%)
+- skeletalMuscleMassKg: 골격근량(kg)
+- bodyFatMassKg: 체지방량(kg)
+- bmi: BMI(kg/m²)
+
+가능하면 현재 검사 결과를 기준으로 추출하고,
+과거 측정 기록인 신체변화 그래프의 이전 값과 혼동하지 마세요.
+
+숫자를 추측하지 마세요.
+식별할 수 없는 값은 임의로 생성하지 마세요.
