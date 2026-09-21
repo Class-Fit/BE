@@ -2,13 +2,18 @@ spring:
   application:
     name: classfit
 
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
   jpa:
     hibernate:
       ddl-auto: update
-    open-in-view: false
-  h2:
-    console:
-      enabled: true
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
 
   security:
     oauth2:
