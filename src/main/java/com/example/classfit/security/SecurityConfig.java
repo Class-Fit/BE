@@ -24,9 +24,18 @@ public class SecurityConfig {
                         .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/courses", "/api/courses/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/api/chat/**").permitAll()
+                        .requestMatchers(HttpMethod.POST,"/api/chat/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/inbodies/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/inbodies/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/inbodies/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/admin/courses/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/members/me").authenticated()
                         .anyRequest().denyAll())
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/chat/**")
+                        .ignoringRequestMatchers("/api/inbodies/**")
+                )
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(entryPoint).accessDeniedHandler(deniedHandler))
