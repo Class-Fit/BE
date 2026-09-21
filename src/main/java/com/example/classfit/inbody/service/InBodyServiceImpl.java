@@ -23,6 +23,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
+import java.awt.image.BufferedImage;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -214,7 +217,25 @@ public class InBodyServiceImpl implements InBodyService {
 
         if (contentType == null ||
                 !contentType.startsWith("image/")) {
+            throw new BusinessException(
+                    InBodyErrorCode.INVALID_IMAGE_TYPE
+            );
+        }
 
+        try {
+            byte[] imageBytes = image.getBytes();
+
+            BufferedImage bufferedImage = ImageIO.read(
+                    new ByteArrayInputStream(imageBytes)
+            );
+
+            if (bufferedImage == null) {
+                throw new BusinessException(
+                        InBodyErrorCode.INVALID_IMAGE_TYPE
+                );
+            }
+
+        } catch (IOException e) {
             throw new BusinessException(
                     InBodyErrorCode.INVALID_IMAGE_TYPE
             );
