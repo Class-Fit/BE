@@ -29,12 +29,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/inbodies/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/inbodies/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/inbodies/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/members/api/test/auth").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/admin/courses/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/members/me").authenticated()
                         .anyRequest().denyAll())
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/chat/**")
                         .ignoringRequestMatchers("/api/inbodies/**")
+                        .ignoringRequestMatchers("/api/admin/courses/sync")
                 )
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .exceptionHandling(errors -> errors

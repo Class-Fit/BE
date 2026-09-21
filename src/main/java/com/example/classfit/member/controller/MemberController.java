@@ -5,6 +5,7 @@ import com.example.classfit.member.dto.MemberMeResponse;
 import com.example.classfit.member.service.MemberService;
 import com.example.classfit.security.LoginMember;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class MemberController {
     private final MemberService memberService;
+
+    @GetMapping("/api/test/auth")
+    public Object auth(Authentication authentication) {
+        return authentication.getAuthorities();
+    }
 
     /** 요청 파라미터 대신 인증 principal의 ID로 본인 정보를 조회한다. */
     @GetMapping("/me")
