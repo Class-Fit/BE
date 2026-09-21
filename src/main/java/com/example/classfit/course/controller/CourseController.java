@@ -18,6 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/courses")
 public class CourseController {
 
+    // 과도한 OFFSET 조회가 공개 검색 DB에 주는 부하를 제한한다.
+    private static final int MAX_PAGE = 10_000;
+    private static final int MAX_SIZE = 100;
+
     private final CourseService courseService;
 
     public CourseController(CourseService courseService) {
@@ -33,10 +37,10 @@ public class CourseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        if (page < 0 || size <= 0) {
+        if (page < 0 || page > MAX_PAGE || size <= 0) {
             throw new BusinessException(CommonErrorCode.INVALID_REQUEST);
         }
-        int safeSize = Math.min(size, 100);
+        int safeSize = Math.min(size, MAX_SIZE);
 
         return ApiResponse.success(courseService.searchCourses(
                 localCode,

@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -72,5 +73,41 @@ class CourseControllerTest {
                 .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
 
         verifyNoInteractions(courseService);
+    }
+
+    @Test
+    void rejectsPageAboveApiLimit() throws Exception {
+        mockMvc.perform(get("/api/courses").param("page", "10001"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+
+        verifyNoInteractions(courseService);
+    }
+
+    @Test
+    void capsRequestedSizeAtOneHundred() throws Exception {
+        when(courseService.searchCourses(null, null, null, 0, 100))
+                .thenReturn(new PageResponse<>(List.of(), 0, 100, 0, 0, true, true));
+
+        mockMvc.perform(get("/api/courses").param("size", "101"))
+                .andExpect(status().isOk());
+
+        verify(courseService).searchCourses(null, null, null, 0, 100);
+    }
+
+    @Test
+    void returnsEmptyMetadataWhenRequestedPageHasNoContent() throws Exception {
+        when(courseService.searchCourses(null, null, null, 5, 20))
+                .thenReturn(new PageResponse<>(List.of(), 5, 20, 42, 3, false, true));
+
+        mockMvc.perform(get("/api/courses").param("page", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").isEmpty())
+                .andExpect(jsonPath("$.data.page").value(5))
+                .andExpect(jsonPath("$.data.size").value(20))
+                .andExpect(jsonPath("$.data.totalCount").value(42))
+                .andExpect(jsonPath("$.data.totalPages").value(3))
+                .andExpect(jsonPath("$.data.first").value(false))
+                .andExpect(jsonPath("$.data.last").value(true));
     }
 }
