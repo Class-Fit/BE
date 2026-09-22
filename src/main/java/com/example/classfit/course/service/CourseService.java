@@ -9,8 +9,11 @@ import com.example.classfit.course.dto.CourseSearchResponse;
 import com.example.classfit.course.repository.CourseRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Locale;
 
 /** 강좌 동기화 데이터의 검색과 상세 조회 규칙을 담당한다. */
 @Service
@@ -32,13 +35,13 @@ public class CourseService {
             int size
     ) {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by("id").descending());
-        return PageResponse.from(courseRepository.search(
-                        normalize(localCode),
-                        normalize(sportCode),
-                        normalize(keyword),
-                        pageRequest
-                )
-                .map(CourseSearchResponse::from)
+
+        Specification<Course> specification = buildSearchSpecification(
+                normalize(localCode), normalize(sportCode), normalize(keyword)
+        );
+
+        return PageResponse.from(courseRepository
+                .findAll(specification, pageRequest).map(CourseSearchResponse::from)
         );
     }
 
@@ -48,7 +51,40 @@ public class CourseService {
         return CourseDetailResponse.from(course);
     }
 
+
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+
+    private Specification<Course> buildSearchSpecification(String localCode, String sportCode, String keyword) {
+        Specification<Course> specification = Specification.allOf();
+
+        if (localCode != null && !localCode.isBlank()) {
+            specification = specification.and(
+                    (root, query, cb) ->
+                            cb.equal(
+                                    root.get("facility").get("localCode"),
+                                    localCode
+                            )
+            );
+        }
+        if (sportCode != null && !sportCode.isBlank()) {
+            specification = specification.and(
+                    (root, query, cb) ->
+                            cb.equal(
+                                    root.get("sportCode"), sportCode
+                            )
+            );
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            specification = specification.and(
+                    (root, query, cb) ->
+                            cb.like(cb.lower(root.get("name")),
+                                    "%" + keyword.toLowerCase(Locale.ROOT) + "%")
+            );
+        }
+
+        return specification;
     }
 }
