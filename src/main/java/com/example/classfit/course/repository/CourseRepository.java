@@ -19,8 +19,9 @@ public interface CourseRepository extends JpaRepository<Course, Long>, JpaSpecif
             String courseNumber
     );
 
+    @Override
     @EntityGraph(attributePaths = "facility")
-    Page<Course> search(Specification<Course> specification, Pageable pageable);
+    Page<Course> findAll(Specification<Course> specification, Pageable pageable);
 
     @EntityGraph(attributePaths = "facility")
     @Query("""
@@ -29,7 +30,7 @@ public interface CourseRepository extends JpaRepository<Course, Long>, JpaSpecif
               and (:sportCode is null or c.sportCode = :sportCode)
               and (:keyword is null or lower(c.name) like lower(concat('%', :keyword, '%')))
             """)
-    Page<Course> search(
+    Page<Course> findAll(
             @Param("localCode") String localCode,
             @Param("sportCode") String sportCode,
             @Param("keyword") String keyword,
