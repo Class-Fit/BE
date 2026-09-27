@@ -51,16 +51,18 @@ public class CourseService {
         return CourseDetailResponse.from(course);
     }
 
-
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-
-    private Specification<Course> buildSearchSpecification(String localCode, String sportCode, String keyword) {
+    private Specification<Course> buildSearchSpecification(
+            String localCode,
+            String sportCode,
+            String keyword
+    ) {
         Specification<Course> specification = Specification.allOf();
 
-        if (localCode != null && !localCode.isBlank()) {
+        if (localCode != null) {
             specification = specification.and(
                     (root, query, cb) ->
                             cb.equal(
@@ -69,7 +71,7 @@ public class CourseService {
                             )
             );
         }
-        if (sportCode != null && !sportCode.isBlank()) {
+        if (sportCode != null) {
             specification = specification.and(
                     (root, query, cb) ->
                             cb.equal(
@@ -77,14 +79,22 @@ public class CourseService {
                             )
             );
         }
-        if (keyword != null && !keyword.isBlank()) {
+        if (keyword != null) {
+            String pattern = "%" + escapeLikePattern(keyword.toLowerCase(Locale.ROOT)) + "%";
             specification = specification.and(
                     (root, query, cb) ->
-                            cb.like(cb.lower(root.get("name")),
-                                    "%" + keyword.toLowerCase(Locale.ROOT) + "%")
+                            cb.like(cb.lower(root.get("name")), pattern, '\\')
             );
         }
 
         return specification;
+    }
+
+    /** LIKE 검색에서 사용자 입력의 %, _, 역슬래시를 일반 문자로 취급한다. */
+    private String escapeLikePattern(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 }
