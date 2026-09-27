@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verify;
         CourseSyncSchedulerTest.TestConfig.class
 })
 @TestPropertySource(properties = {
+        "public-data.sync.enabled=true",
         "public-data.sync.cron=*/1 * * * * *",
         "public-data.sync.zone=Asia/Seoul"
 })

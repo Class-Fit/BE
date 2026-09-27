@@ -39,6 +39,7 @@ spring:
 
 public-data:
   sync:
+    enabled: "${PUBLIC_DATA_SYNC_ENABLED:false}"
     cron: "${PUBLIC_DATA_SYNC_CRON:0 0 3 * * *}"
     zone: "${PUBLIC_DATA_SYNC_ZONE:Asia/Seoul}"
   facility-service-key: ${PUBLIC_DATA_FACILITY_SERVICE_KEY:}
