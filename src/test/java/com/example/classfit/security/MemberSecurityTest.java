@@ -14,9 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.startsWith;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** 실제 보안 필터와 DB를 사용해 서비스 회원 조회 및 API 접근 정책을 검증한다. */
@@ -39,6 +42,46 @@ class MemberSecurityTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void anonymousFavoriteRequestReturnsJson401() throws Exception {
+        mvc.perform(get("/api/members/me/favorites"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void authenticatedMemberCanReadFavorites() throws Exception {
+        LoginMember principal = savedLoginMember("favorite-reader");
+
+        mvc.perform(get("/api/members/me/favorites")
+                        .with(oauth2Login().oauth2User(principal)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @Test
+    void authenticatedMemberCanReachFavoriteRegistration() throws Exception {
+        LoginMember principal = savedLoginMember("favorite-writer");
+
+        mvc.perform(post("/api/courses/999999/favorites")
+                        .with(oauth2Login().oauth2User(principal))
+                        .with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+    }
+
+    @Test
+    void authenticatedMemberCanReachFavoriteCancellation() throws Exception {
+        LoginMember principal = savedLoginMember("favorite-remover");
+
+        mvc.perform(delete("/api/courses/999999/favorites")
+                        .with(oauth2Login().oauth2User(principal))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.favorited").value(false));
     }
 
     @Test
@@ -87,5 +130,12 @@ class MemberSecurityTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value("OAUTH_LOGIN_FAILED"))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("secret-code"))));
+    }
+
+    private LoginMember savedLoginMember(String providerId) {
+        Member member = members.saveAndFlush(Member.createOAuthMember(
+                OAuthProvider.KAKAO, providerId, "회원", null, null
+        ));
+        return LoginMember.from(member);
     }
 }
