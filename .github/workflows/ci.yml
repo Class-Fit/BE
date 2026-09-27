@@ -34,7 +34,7 @@ jobs:
       - name: Gradle 설정
         uses: gradle/actions/setup-gradle@v6
 
-      # 현재는 별도 프로필 없이 H2 의존성으로 인메모리 DB가 자동 구성된다.
+      # test 프로필이 Testcontainers로 PostgreSQL 17 컨테이너를 자동 실행한다.
       - name: 빌드 및 테스트
         run: ./gradlew build --no-daemon
         env:

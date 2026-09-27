@@ -50,7 +50,6 @@ class OAuthCallbackIntegrationTest {
         String base = "http://127.0.0.1:" + provider.getAddress().getPort();
         properties.add("spring.security.oauth2.client.provider.kakao.token-uri", () -> base + "/token");
         properties.add("spring.security.oauth2.client.provider.kakao.user-info-uri", () -> base + "/user");
-        properties.add("spring.datasource.url", () -> "jdbc:h2:mem:oauth-callback;DB_CLOSE_DELAY=-1");
     }
 
     @BeforeEach

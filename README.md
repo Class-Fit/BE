@@ -31,7 +31,7 @@ http://localhost:8080/oauth2/authorization/kakao
 
 카카오 인증 후 `/login/oauth2/code/kakao` 콜백을 처리하고 `/api/members/me`로 이동합니다. 해당 페이지의 JSON에서 회원 ID를 확인할 수 있습니다. 같은 서버 실행 중 다시 로그인하면 같은 회원 ID를 사용합니다.
 
-현재 기본 DB는 자동 구성되는 H2 인메모리 DB입니다. 서버를 재시작하면 회원 데이터가 사라질 수 있으며, 영속 DB 설정과 배포 설정은 별도 작업입니다. 개발·테스트용 가짜 OAuth 값으로는 실제 카카오에 로그인할 수 없습니다.
+현재 기본 DB는 PostgreSQL이며 `DB_NAME`, `DB_USER`, `DB_PASSWORD` 환경변수로 접속 정보를 설정합니다. 개발·테스트용 가짜 OAuth 값으로는 실제 카카오에 로그인할 수 없습니다.
 
 ## 요청과 응답
 
@@ -82,7 +82,7 @@ http://localhost:8080/oauth2/authorization/kakao
 ./gradlew clean build --no-daemon
 ```
 
-Spring 컨텍스트 테스트는 `test` 프로필의 가짜 OAuth 설정과 H2를 사용합니다. 카카오 키를 CI에 등록할 필요가 없습니다.
+Spring 컨텍스트 테스트는 `test` 프로필과 Testcontainers가 실행한 PostgreSQL 17을 사용합니다. 로컬 전체 테스트에는 Docker 호환 실행 환경이 필요하며 카카오 키를 CI에 등록할 필요는 없습니다.
 
 - 응답·예외 테스트: 기존 성공/실패 DTO와 MVC 400·404·500 유지
 - 회원 테스트: 신규·기존 회원, 선택 정보 누락, DB 유니크 제약
