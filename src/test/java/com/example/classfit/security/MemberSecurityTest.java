@@ -74,14 +74,14 @@ class MemberSecurityTest {
     }
 
     @Test
-    void authenticatedMemberCanReachFavoriteCancellation() throws Exception {
+    void favoriteCancellationReturns404ForMissingCourse() throws Exception {
         LoginMember principal = savedLoginMember("favorite-remover");
 
         mvc.perform(delete("/api/courses/999999/favorites")
                         .with(oauth2Login().oauth2User(principal))
                         .with(csrf()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.favorited").value(false));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
     }
 
     @Test

@@ -102,6 +102,25 @@ class FavoriteServiceTest {
     }
 
     @Test
+    void rejectsCancellationOfMissingCourse() {
+        assertThatThrownBy(() -> favoriteService.removeFavorite(member.getId(), 999999L))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode.code")
+                .isEqualTo("RESOURCE_NOT_FOUND");
+    }
+
+    @Test
+    void cancellationOfExistingUnfavoritedCourseIsIdempotent() {
+        var firstResponse = favoriteService.removeFavorite(member.getId(), course.getId());
+        var secondResponse = favoriteService.removeFavorite(member.getId(), course.getId());
+
+        assertThat(firstResponse.courseId()).isEqualTo(course.getId());
+        assertThat(firstResponse.favorited()).isFalse();
+        assertThat(secondResponse).isEqualTo(firstResponse);
+        assertThat(favoriteRepository.count()).isZero();
+    }
+
+    @Test
     void rejectsMissingCourse() {
         assertThatThrownBy(() -> favoriteService.addFavorite(member.getId(), 999999L))
                 .isInstanceOf(BusinessException.class)
