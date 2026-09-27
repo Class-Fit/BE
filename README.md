@@ -33,6 +33,24 @@ http://localhost:8080/oauth2/authorization/kakao
 
 현재 기본 DB는 PostgreSQL이며 `DB_NAME`, `DB_USER`, `DB_PASSWORD` 환경변수로 접속 정보를 설정합니다. 개발·테스트용 가짜 OAuth 값으로는 실제 카카오에 로그인할 수 없습니다.
 
+## 공공데이터 동기화 설정
+
+시설·강좌 동기화에는 다음 환경변수가 필요합니다.
+
+| 환경변수 | 역할 |
+|---|---|
+| `PUBLIC_DATA_FACILITY_URL` | 등록시설 API의 전체 요청 경로 |
+| `PUBLIC_DATA_FACILITY_SERVICE_KEY` | 등록시설 API 인증키 |
+| `PUBLIC_DATA_COURSE_URL` | 등록강좌 API의 전체 요청 경로 |
+| `PUBLIC_DATA_COURSE_SERVICE_KEY` | 등록강좌 API 인증키 |
+| `PUBLIC_DATA_SYNC_ENABLED` | `true`일 때만 정기 동기화 활성화 |
+| `PUBLIC_DATA_SYNC_CRON` | 정기 동기화 cron, 기본값 `0 0 3 * * *` |
+| `PUBLIC_DATA_SYNC_ZONE` | 정기 동기화 시간대, 기본값 `Asia/Seoul` |
+
+정기 동기화는 기본적으로 비활성화되어 있습니다. API 주소·인증키와 전체 수동 동기화를 검증한 환경에서만 `PUBLIC_DATA_SYNC_ENABLED=true`를 설정합니다. 이 값이 `false`이거나 없더라도 관리자의 `POST /api/admin/courses/sync` 수동 동기화는 사용할 수 있습니다.
+
+Spring Boot는 `.env` 파일을 자동으로 읽지 않습니다. 터미널에서 `.env`를 사용할 때는 값을 현재 프로세스의 환경변수로 내보낸 뒤 애플리케이션을 실행해야 합니다. API 인증키와 인증키가 포함된 전체 요청 URL은 커밋하거나 로그에 남기지 않습니다.
+
 ## 요청과 응답
 
 | 요청 | 동작 |
