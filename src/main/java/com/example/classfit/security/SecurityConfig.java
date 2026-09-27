@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .ignoringRequestMatchers("/api/chat/**")
                         .ignoringRequestMatchers("/api/inbodies/**")
                         .ignoringRequestMatchers("/api/admin/courses/sync")
+                        .ignoringRequestMatchers("/api/courses/*/favorites")
                 )
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .exceptionHandling(errors -> errors
