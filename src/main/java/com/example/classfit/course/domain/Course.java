@@ -16,6 +16,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -76,18 +78,48 @@ public class Course {
         return new Course(facility, item);
     }
 
-    public void update(Facility facility, PublicCourseItem item) {
-        this.facility = facility;
-        this.businessRegistrationNumber = item.businessRegistrationNumber();
-        this.courseNumber = item.courseNumber();
-        this.name = item.courseName();
-        this.sportCode = item.sportCode();
-        this.sportName = item.sportName();
-        this.instructorName = item.instructorName();
-        this.startTime = item.startTime();
-        this.endTime = item.endTime();
-        this.weekdayMask = item.weekdayMask();
-        this.fee = item.fee();
-        this.description = item.description();
+    public boolean update(Facility facility, PublicCourseItem item) {
+        String businessRegistrationNumber = normalize(item.businessRegistrationNumber());
+        String courseNumber = normalize(item.courseNumber());
+        String name = normalize(item.courseName());
+        String sportCode = normalize(item.sportCode());
+        String sportName = normalize(item.sportName());
+        String instructorName = normalize(item.instructorName());
+        String startTime = normalize(item.startTime());
+        String endTime = normalize(item.endTime());
+        String weekdayMask = normalize(item.weekdayMask());
+        String description = normalize(item.description());
+
+        boolean changed = !Objects.equals(this.businessRegistrationNumber, businessRegistrationNumber)
+                || !Objects.equals(this.courseNumber, courseNumber)
+                || !Objects.equals(this.name, name)
+                || !Objects.equals(this.sportCode, sportCode)
+                || !Objects.equals(this.sportName, sportName)
+                || !Objects.equals(this.instructorName, instructorName)
+                || !Objects.equals(this.startTime, startTime)
+                || !Objects.equals(this.endTime, endTime)
+                || !Objects.equals(this.weekdayMask, weekdayMask)
+                || !Objects.equals(this.fee, item.fee())
+                || !Objects.equals(this.description, description);
+
+        if (changed) {
+            this.facility = facility;
+            this.businessRegistrationNumber = businessRegistrationNumber;
+            this.courseNumber = courseNumber;
+            this.name = name;
+            this.sportCode = sportCode;
+            this.sportName = sportName;
+            this.instructorName = instructorName;
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.weekdayMask = weekdayMask;
+            this.fee = item.fee();
+            this.description = description;
+        }
+        return changed;
+    }
+
+    private String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

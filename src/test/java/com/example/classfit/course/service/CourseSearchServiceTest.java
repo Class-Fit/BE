@@ -31,10 +31,10 @@ class CourseSearchServiceTest {
     void setUp() {
         Facility wonju = persistenceService.upsertFacility(facility(
                 "1000000001", "1", "원주 국민체육센터", "51110"
-        ));
+        )).entity();
         Facility chuncheon = persistenceService.upsertFacility(facility(
                 "1000000002", "2", "춘천 시민체육관", "51210"
-        ));
+        )).entity();
 
         saveCourse(wonju, "100", "Morning PILATES", "PILATES");
         saveCourse(wonju, "101", "초급 수영 100%", "SWIM");

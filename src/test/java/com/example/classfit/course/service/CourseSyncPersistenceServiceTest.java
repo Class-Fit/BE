@@ -27,8 +27,8 @@ class CourseSyncPersistenceServiceTest {
 
     @Test
     void savesCoursesSeparatelyWhenFacilitiesShareBusinessNumberAndCourseNumber() {
-        Facility firstFacility = persistenceService.upsertFacility(facility("1"));
-        Facility secondFacility = persistenceService.upsertFacility(facility("2"));
+        Facility firstFacility = persistenceService.upsertFacility(facility("1")).entity();
+        Facility secondFacility = persistenceService.upsertFacility(facility("2")).entity();
 
         persistenceService.upsertCourse("1234567890", firstFacility.getFacilitySerialNumber(), course("1"));
         persistenceService.upsertCourse("1234567890", secondFacility.getFacilitySerialNumber(), course("2"));

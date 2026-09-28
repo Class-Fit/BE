@@ -55,7 +55,7 @@ public class CourseSyncService {
                     continue;
                 }
 
-                facilities.add(persistenceService.upsertFacility(item));
+                facilities.add(persistenceService.upsertFacility(item).entity());
             }
 
             if (page.items().isEmpty() || pageNumber * properties.getPageSize() >= page.totalCount()) {
