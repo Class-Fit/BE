@@ -9,6 +9,7 @@ public record ChatMessageListRes(
         Long messageId,
         ChatRole role,
         String content,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        RecommendationResult recommendation
 ) {
 }

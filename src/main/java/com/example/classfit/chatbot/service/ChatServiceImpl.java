@@ -14,6 +14,15 @@ import com.example.classfit.chatbot.repository.ConversationRepository;
 import com.example.classfit.common.exception.BusinessException;
 import com.example.classfit.member.domain.Member;
 import com.example.classfit.member.repository.MemberRepository;
+import com.example.classfit.chatbot.dto.res.RecommendationResult;
+import com.example.classfit.course.service.RecommendationCatalogService;
+import com.example.classfit.inbody.service.InBodyService;
+import com.example.classfit.inbody.dto.res.InBodyCreateRes;
+import com.example.classfit.inbody.exception.InBodyErrorCode;
+import com.example.classfit.common.exception.CommonErrorCode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import java.util.LinkedHashMap;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +38,10 @@ public class ChatServiceImpl implements ChatService {
     private final MemberRepository memberRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final AiService aiService;
+    private final InBodyService inBodyService;
+    private final RecommendationCatalogService catalog;
+    private final RecommendationService recommendationService;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -61,6 +74,10 @@ public class ChatServiceImpl implements ChatService {
     ) {
 
         // 채팅방 조회
+        if (request == null || request.content() == null || request.content().isBlank()
+                || request.content().length() > 4000) {
+            throw new BusinessException(CommonErrorCode.INVALID_REQUEST);
+        }
         Conversation conversation = conversationRepository
                 .findById(conversationId)
                 .orElseThrow(() ->
@@ -93,14 +110,40 @@ public class ChatServiceImpl implements ChatService {
                         );
 
         // GPT 호출
-        String aiResponse =
-                aiService.generateResponse(messages);
+        InBodyCreateRes inBody = latestInBody(memberId);
+        var context = new LinkedHashMap<String, Object>();
+        context.put("gender", conversation.getMember().getGender());
+        context.put("latestInBody", inBody == null ? null : java.util.Map.of(
+                "heightCm", inBody.heightCm(), "weightKg", inBody.weightKg(),
+                "bodyFatPercentage", inBody.bodyFatPercentage(),
+                "skeletalMuscleMassKg", inBody.skeletalMuscleMassKg(),
+                "bodyFatMassKg", inBody.bodyFatMassKg(), "bmi", inBody.bmi()));
+        context.put("sports", catalog.getSports());
+        context.put("regions", catalog.getRegions());
+        var previousSearch = new LinkedHashMap<String, Object>();
+        previousSearch.put("sport", conversation.getRecommendedSport());
+        previousSearch.put("localCode", conversation.getRecommendationLocalCode());
+        previousSearch.put("page", conversation.getRecommendationPage());
+        previousSearch.put("hasNext", conversation.getRecommendationHasNext());
+        previousSearch.put("personalized", conversation.getPersonalizedRecommendation());
+        previousSearch.put("weekendOnly", conversation.getRecommendationWeekendOnly());
+        previousSearch.put("level", conversation.getRecommendationLevel());
+        previousSearch.put("allowedDays", conversation.getRecommendationAllowedDays());
+        context.put("previousSearch", previousSearch);
+        context.put("candidateSports", conversation.candidateSports());
+        context.put("selectedCandidateSport", conversation.getSelectedCandidateSport());
+        context.put("candidateRegionName", conversation.getCandidateRegionName());
+        RecommendationResult recommendation = recommendationService.resolve(conversation,
+                aiService.recommend(messages, toJson(context)), inBody != null,
+                conversation.getMember().getGender() != null);
+        String aiResponse = recommendation.content();
 
         // GPT 응답 저장
         ChatMessage assistantMessage = ChatMessage.builder()
                 .conversation(conversation)
                 .role(ChatRole.ASSISTANT)
                 .content(aiResponse)
+                .recommendationJson(toJson(recommendation))
                 .build();
 
         ChatMessage savedAssistant =
@@ -110,7 +153,7 @@ public class ChatServiceImpl implements ChatService {
         return new ChatMessageRes(
                 savedAssistant.getId(),
                 savedAssistant.getRole(),
-                savedAssistant.getContent()
+                savedAssistant.getContent(), recommendation
         );
     }
 
@@ -157,8 +200,33 @@ public class ChatServiceImpl implements ChatService {
                         message.getId(),
                         message.getRole(),
                         message.getContent(),
-                        message.getCreatedAt()
+                        message.getCreatedAt(), readRecommendation(message.getRecommendationJson())
                 ))
                 .toList();
+    }
+    private InBodyCreateRes latestInBody(Long memberId) {
+        try {
+            return inBodyService.getLatestInBody(memberId);
+        } catch (BusinessException exception) {
+            if (exception.getErrorCode() == InBodyErrorCode.INBODY_NOT_FOUND) return null;
+            throw exception;
+        }
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("추천 정보를 변환하지 못했습니다.", exception);
+        }
+    }
+
+    private RecommendationResult readRecommendation(String json) {
+        if (json == null) return null;
+        try {
+            return objectMapper.readValue(json, RecommendationResult.class);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("저장된 추천 정보를 읽지 못했습니다.", exception);
+        }
     }
 }
