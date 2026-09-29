@@ -31,10 +31,10 @@ class CourseSearchServiceTest {
     void setUp() {
         Facility wonju = persistenceService.upsertFacility(facility(
                 "1000000001", "1", "원주 국민체육센터", "51110"
-        ));
+        )).entity();
         Facility chuncheon = persistenceService.upsertFacility(facility(
                 "1000000002", "2", "춘천 시민체육관", "51210"
-        ));
+        )).entity();
 
         saveCourse(wonju, "100", "Morning PILATES", "PILATES");
         saveCourse(wonju, "101", "초급 수영 100%", "SWIM");
@@ -136,7 +136,9 @@ class CourseSearchServiceTest {
 
     @Test
     void selectedDayMatchesCoursesContainingOtherDaysAndFiltersBeforePaging() {
-        Facility facility = persistenceService.upsertFacility(facility("weekday-test", "days", "요일 시설", "51130"));
+        Facility facility = persistenceService
+                .upsertFacility(facility("weekday-test", "days", "요일 시설", "51130"))
+                .entity();
         String[] masks = {"1000000", "1110000", "1010100", "0101000", "0010000", null, "0000000", "x000000"};
         for (int i = 0; i < masks.length; i++) {
             persistenceService.upsertCourse("weekday-test", "days", new PublicCourseItem(

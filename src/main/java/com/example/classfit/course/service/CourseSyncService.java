@@ -2,17 +2,19 @@ package com.example.classfit.course.service;
 
 import com.example.classfit.course.config.PublicDataProperties;
 import com.example.classfit.course.domain.Facility;
-import com.example.classfit.course.dto.CourseSyncResponse;
 import com.example.classfit.course.dto.PublicCourseItem;
 import com.example.classfit.course.dto.PublicFacilityItem;
+import com.example.classfit.course.dto.SyncResultCount;
 import com.example.classfit.course.external.PublicDataPage;
 import com.example.classfit.course.external.VoucherCourseApiClient;
 import com.example.classfit.course.external.VoucherFacilityApiClient;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 public class CourseSyncService {
 
@@ -33,40 +35,54 @@ public class CourseSyncService {
         this.persistenceService = persistenceService;
     }
 
-    public CourseSyncResponse syncGangwonCourses() {
+    public CourseSyncResult syncGangwonCourses() {
         properties.validateForSync();
-        List<Facility> facilities = syncFacilities();
+        FacilitySyncResult facilityResult = syncFacilities();
 
-        int savedCourses = 0;
-        for (Facility facility : facilities) {
-            savedCourses += syncCoursesForFacility(facility);
+        SyncResultCount courseResult = SyncResultCount.empty();
+        for (Facility facility : facilityResult.facilities()) {
+            courseResult = add(courseResult, syncCoursesForFacility(facility));
         }
-        return new CourseSyncResponse(facilities.size(), savedCourses);
+        return new CourseSyncResult(facilityResult.counts(), courseResult);
     }
 
-    private List<Facility> syncFacilities() {
+    private FacilitySyncResult syncFacilities() {
         List<Facility> facilities = new ArrayList<>();
+        SyncResultCount counts = SyncResultCount.empty();
         int pageNumber = 1;
 
         while (true) {
             PublicDataPage<PublicFacilityItem> page = facilityApiClient.fetchGangwonFacilities(pageNumber);
             for (PublicFacilityItem item : page.items()) {
                 if (isBlank(item.businessRegistrationNumber()) || isBlank(item.facilitySerialNumber())) {
+                    counts = counts.skip();
                     continue;
                 }
 
-                facilities.add(persistenceService.upsertFacility(item));
+                try {
+                    SyncItemResult<Facility> result = persistenceService.upsertFacility(item);
+                    facilities.add(result.entity());
+                    counts = counts.add(result.status());
+                } catch (RuntimeException exception) {
+                    log.warn(
+                            "시설 저장 실패: brno={}, facil_sn={}, exceptionType={}",
+                            item.businessRegistrationNumber(),
+                            item.facilitySerialNumber(),
+                            exception.getClass().getName()
+                    );
+                    counts = counts.fail();
+                }
             }
 
             if (page.items().isEmpty() || pageNumber * properties.getPageSize() >= page.totalCount()) {
-                return facilities;
+                return new FacilitySyncResult(facilities, counts);
             }
             pageNumber++;
         }
     }
 
-    private int syncCoursesForFacility(Facility facility) {
-        int savedCourses = 0;
+    private SyncResultCount syncCoursesForFacility(Facility facility) {
+        SyncResultCount counts = SyncResultCount.empty();
         int pageNumber = 1;
 
         while (true) {
@@ -78,19 +94,31 @@ public class CourseSyncService {
 
             for (PublicCourseItem item : page.items()) {
                 if (isBlank(item.courseNumber())) {
+                    counts = counts.skip();
                     continue;
                 }
 
-                persistenceService.upsertCourse(
-                        facility.getBusinessRegistrationNumber(),
-                        facility.getFacilitySerialNumber(),
-                        item
-                );
-                savedCourses++;
+                try {
+                    SyncItemResult<?> result = persistenceService.upsertCourse(
+                            facility.getBusinessRegistrationNumber(),
+                            facility.getFacilitySerialNumber(),
+                            item
+                    );
+                    counts = counts.add(result.status());
+                } catch (RuntimeException exception) {
+                    log.warn(
+                            "강좌 저장 실패: brno={}, facil_sn={}, course_no={}, exceptionType={}",
+                            facility.getBusinessRegistrationNumber(),
+                            facility.getFacilitySerialNumber(),
+                            item.courseNumber(),
+                            exception.getClass().getName()
+                    );
+                    counts = counts.fail();
+                }
             }
 
             if (page.items().isEmpty() || pageNumber * properties.getPageSize() >= page.totalCount()) {
-                return savedCourses;
+                return counts;
             }
             pageNumber++;
         }
@@ -98,5 +126,21 @@ public class CourseSyncService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private SyncResultCount add(SyncResultCount left, SyncResultCount right) {
+        return new SyncResultCount(
+                left.inserted() + right.inserted(),
+                left.updated() + right.updated(),
+                left.unchanged() + right.unchanged(),
+                left.skipped() + right.skipped(),
+                left.failed() + right.failed()
+        );
+    }
+
+    private record FacilitySyncResult(
+            List<Facility> facilities,
+            SyncResultCount counts
+    ) {
     }
 }

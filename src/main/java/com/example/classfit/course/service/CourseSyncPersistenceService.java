@@ -25,42 +25,63 @@ public class CourseSyncPersistenceService {
     }
 
     @Transactional
-    public Facility upsertFacility(PublicFacilityItem item) {
-        Facility facility = facilityRepository
+    public SyncItemResult<Facility> upsertFacility(PublicFacilityItem item) {
+        return facilityRepository
                 .findByBusinessRegistrationNumberAndFacilitySerialNumber(
-                        item.businessRegistrationNumber(),
-                        item.facilitySerialNumber()
+                        normalizeIdentifier(item.businessRegistrationNumber()),
+                        normalizeIdentifier(item.facilitySerialNumber())
                 )
-                .map(existing -> {
-                    existing.update(item);
-                    return existing;
-                })
-                .orElseGet(() -> Facility.from(item));
-
-        return facilityRepository.save(facility);
+                .map(existing -> updateFacility(existing, item))
+                .orElseGet(() -> new SyncItemResult<>(
+                        facilityRepository.save(Facility.from(item)),
+                        SyncItemStatus.INSERTED
+                ));
     }
 
     @Transactional
-    public void upsertCourse(
+    public SyncItemResult<Course> upsertCourse(
             String businessRegistrationNumber,
             String facilitySerialNumber,
             PublicCourseItem item
     ) {
         Facility facility = facilityRepository
                 .findByBusinessRegistrationNumberAndFacilitySerialNumber(
-                        businessRegistrationNumber,
-                        facilitySerialNumber
+                        normalizeIdentifier(businessRegistrationNumber),
+                        normalizeIdentifier(facilitySerialNumber)
                 )
                 .orElseThrow(() -> new IllegalStateException("등록시설을 찾을 수 없습니다."));
 
-        Course course = courseRepository
-                .findByFacilityIdAndCourseNumber(facility.getId(), item.courseNumber())
-                .map(existing -> {
-                    existing.update(facility, item);
-                    return existing;
-                })
-                .orElseGet(() -> Course.from(facility, item));
+        return courseRepository
+                .findByFacilityIdAndCourseNumber(
+                        facility.getId(),
+                        normalizeIdentifier(item.courseNumber())
+                )
+                .map(existing -> updateCourse(existing, facility, item))
+                .orElseGet(() -> new SyncItemResult<>(
+                        courseRepository.save(Course.from(facility, item)),
+                        SyncItemStatus.INSERTED
+                ));
+    }
 
-        courseRepository.save(course);
+    private SyncItemResult<Facility> updateFacility(Facility facility, PublicFacilityItem item) {
+        if (!facility.update(item)) {
+            return new SyncItemResult<>(facility, SyncItemStatus.UNCHANGED);
+        }
+        return new SyncItemResult<>(facilityRepository.save(facility), SyncItemStatus.UPDATED);
+    }
+
+    private SyncItemResult<Course> updateCourse(
+            Course course,
+            Facility facility,
+            PublicCourseItem item
+    ) {
+        if (!course.update(facility, item)) {
+            return new SyncItemResult<>(course, SyncItemStatus.UNCHANGED);
+        }
+        return new SyncItemResult<>(courseRepository.save(course), SyncItemStatus.UPDATED);
+    }
+
+    private String normalizeIdentifier(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

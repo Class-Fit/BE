@@ -1,6 +1,7 @@
 package com.example.classfit.course.service;
 
 import com.example.classfit.course.config.CourseSyncSchedulingConfig;
+import com.example.classfit.course.domain.sync.SyncTriggerType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.env.YamlPropertySourceLoader;
@@ -36,11 +37,11 @@ import static org.mockito.Mockito.verify;
 class CourseSyncSchedulerTest {
 
     @Autowired
-    private CourseSyncService courseSyncService;
+    private CourseSyncCoordinator courseSyncCoordinator;
 
     @Test
     void scheduledTriggerStartsTheExistingSyncService() {
-        verify(courseSyncService, timeout(2500).atLeastOnce()).syncGangwonCourses();
+        verify(courseSyncCoordinator, timeout(2500).atLeastOnce()).sync(SyncTriggerType.SCHEDULED);
     }
 
     @Test
@@ -62,8 +63,8 @@ class CourseSyncSchedulerTest {
     @Configuration
     static class TestConfig {
         @Bean
-        CourseSyncService courseSyncService() {
-            return mock(CourseSyncService.class);
+        CourseSyncCoordinator courseSyncCoordinator() {
+            return mock(CourseSyncCoordinator.class);
         }
     }
 }
