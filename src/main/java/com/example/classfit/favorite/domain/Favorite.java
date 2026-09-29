@@ -13,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/** 회원과 강좌의 찜 관계를 저장하며, 같은 회원과 강좌의 중복 행을 금지한다. */
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -33,11 +34,24 @@ public class Favorite extends BaseEntity {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
+    /**
+     * 지정한 회원과 강좌를 연결한 찜 객체를 구성한다.
+     *
+     * @param member 찜을 소유하는 회원
+     * @param course 찜 대상 강좌
+     */
     private Favorite(Member member, Course course) {
         this.member = member;
         this.course = course;
     }
 
+    /**
+     * 회원과 강좌의 찜 객체를 생성한다. DB 저장은 수행하지 않는다.
+     *
+     * @param member 찜을 소유하는 회원
+     * @param course 찜 대상 강좌
+     * @return 아직 영속화되지 않은 찜 객체
+     */
     public static Favorite create(Member member, Course course) {
         return new Favorite(member, course);
     }

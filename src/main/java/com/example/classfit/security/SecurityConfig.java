@@ -14,7 +14,19 @@ import org.springframework.security.web.savedrequest.NullRequestCache;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    /** OAuth 인증, 고정 성공 경로, 보안 오류 JSON과 허용 경로를 연결한다. */
+    /**
+     * OAuth 로그인, API 접근 권한 및 보안 오류 응답을 구성한다.
+     * 찜 쓰기 API는 인증이 필요하지만 시연용 CSRF 예외가 적용되어 있다.
+     * 운영 배포 전에는 클라이언트의 CSRF 토큰 전달과 함께 해당 예외를 제거해야 한다.
+     *
+     * @param http 보안 필터 체인 빌더
+     * @param userService OAuth 회원 정보를 연결하는 서비스
+     * @param entryPoint 인증되지 않은 요청의 오류 처리기
+     * @param deniedHandler 접근 권한이 없는 요청의 오류 처리기
+     * @param writer OAuth 실패의 JSON 응답 작성기
+     * @return 서비스의 HTTP 보안 필터 체인
+     * @throws Exception 보안 필터 체인을 구성하지 못할 경우
+     */
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, CustomOAuth2UserService userService,
                                             ApiAuthenticationEntryPoint entryPoint,

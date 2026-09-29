@@ -30,6 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** 인증된 회원 식별자의 전달과 찜 API의 JSON 응답 형식을 검증한다. */
 @ExtendWith(MockitoExtension.class)
 class FavoriteControllerTest {
 
@@ -39,6 +40,7 @@ class FavoriteControllerTest {
     private MockMvc mockMvc;
     private LoginMember loginMember;
 
+    /** 인증된 테스트 회원과 독립적인 MVC 컨트롤러 테스트 환경을 구성한다. */
     @BeforeEach
     void setUp() {
         Member member = mock(Member.class);
@@ -56,11 +58,13 @@ class FavoriteControllerTest {
                 .build();
     }
 
+    /** 다음 테스트에 인증 정보가 남지 않도록 보안 컨텍스트를 비운다. */
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
     }
 
+    /** 로그인한 회원의 찜 등록 요청이 등록 상태를 JSON으로 반환하는지 검증한다. */
     @Test
     void addsFavoriteForAuthenticatedMember() throws Exception {
         when(favoriteService.addFavorite(1L, 10L))
@@ -73,6 +77,7 @@ class FavoriteControllerTest {
                 .andExpect(jsonPath("$.data.favorited").value(true));
     }
 
+    /** 로그인한 회원의 찜 취소 요청이 취소 상태를 JSON으로 반환하는지 검증한다. */
     @Test
     void removesFavoriteForAuthenticatedMember() throws Exception {
         when(favoriteService.removeFavorite(1L, 10L))
@@ -84,6 +89,7 @@ class FavoriteControllerTest {
                 .andExpect(jsonPath("$.data.favorited").value(false));
     }
 
+    /** 찜 목록 요청이 인증된 회원 식별자를 전달하고 강좌 정보를 반환하는지 검증한다. */
     @Test
     void returnsFavoriteCoursesForAuthenticatedMember() throws Exception {
         CourseSearchResponse course = new CourseSearchResponse(

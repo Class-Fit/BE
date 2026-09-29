@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 독립된 DB 트랜잭션에서 찜 중복 등록의 원자성과 감사 시각 보존을 검증한다. */
 @DataJpaTest
 @ActiveProfiles("test")
 @Import({FavoriteService.class, JpaAuditingConfig.class})
@@ -51,6 +52,7 @@ class FavoriteConcurrencyTest {
     private Long facilityId;
     private Long courseId;
 
+    /** 다른 스레드의 트랜잭션에서도 조회할 수 있도록 테스트 데이터를 커밋해 저장한다. */
     @BeforeEach
     void setUp() {
         // Worker transactions must be able to see committed fixtures.
@@ -69,6 +71,7 @@ class FavoriteConcurrencyTest {
         ))).getId();
     }
 
+    /** 테스트가 저장한 찜, 강좌, 시설 및 회원을 외래 키 의존 순서에 맞춰 삭제한다. */
     @AfterEach
     void tearDown() {
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
@@ -87,6 +90,7 @@ class FavoriteConcurrencyTest {
         });
     }
 
+    /** 같은 찜을 동시에 등록하는 요청 8개가 모두 성공하고 한 행만 남기는지 검증한다. */
     @Test
     void concurrentDuplicateRegistrationsAllSucceedWithOneFavorite() throws Exception {
         int requestCount = 8;
@@ -126,6 +130,7 @@ class FavoriteConcurrencyTest {
         assertThat(favorites.getFirst().getUpdatedAt()).isNotNull();
     }
 
+    /** 중복 등록이 기존 찜의 식별자와 생성 및 수정 시각을 변경하지 않는지 검증한다. */
     @Test
     void duplicateRegistrationKeepsOriginalIdentityAndAuditTimestamps() {
         favoriteService.addFavorite(memberId, courseId);
@@ -143,6 +148,11 @@ class FavoriteConcurrencyTest {
         assertThat(favorites.getFirst().getUpdatedAt()).isEqualTo(original.getUpdatedAt());
     }
 
+    /**
+     * 시설의 LOB 필드도 트랜잭션 안에서 읽도록 테스트 회원의 찜을 조회한다.
+     *
+     * @return 강좌와 시설이 함께 로딩된 테스트 회원의 찜 목록
+     */
     private List<Favorite> savedFavorites() {
         return new TransactionTemplate(transactionManager).execute(
                 status -> favoriteRepository.findAllByMemberIdOrderByIdDesc(memberId)
