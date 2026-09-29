@@ -38,8 +38,8 @@ class CourseSyncActivationTest {
     @Configuration
     static class TestConfig {
         @Bean
-        CourseSyncService courseSyncService() {
-            return mock(CourseSyncService.class);
+        CourseSyncCoordinator courseSyncCoordinator() {
+            return mock(CourseSyncCoordinator.class);
         }
     }
 }

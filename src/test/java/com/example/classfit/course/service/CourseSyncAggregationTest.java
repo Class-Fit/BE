@@ -3,7 +3,6 @@ package com.example.classfit.course.service;
 import com.example.classfit.course.config.PublicDataProperties;
 import com.example.classfit.course.domain.Course;
 import com.example.classfit.course.domain.Facility;
-import com.example.classfit.course.dto.CourseSyncResponse;
 import com.example.classfit.course.dto.PublicCourseItem;
 import com.example.classfit.course.dto.PublicFacilityItem;
 import com.example.classfit.course.external.PublicDataPage;
@@ -66,7 +65,7 @@ class CourseSyncAggregationTest {
         when(persistenceService.upsertCourse("123", "1", unchanged))
                 .thenReturn(new SyncItemResult<>(mock(Course.class), SyncItemStatus.UNCHANGED));
 
-        CourseSyncResponse response = courseSyncService.syncGangwonCourses();
+        CourseSyncResult response = courseSyncService.syncGangwonCourses();
 
         assertThat(count(response, "facilities", "inserted")).isEqualTo(1);
         assertThat(count(response, "facilities", "updated")).isZero();
@@ -96,7 +95,7 @@ class CourseSyncAggregationTest {
         when(courseApiClient.fetchCourses("456", "2", 1))
                 .thenReturn(new PublicDataPage<>(List.of(), 0));
 
-        CourseSyncResponse response = courseSyncService.syncGangwonCourses();
+        CourseSyncResult response = courseSyncService.syncGangwonCourses();
 
         assertThat(count(response, "facilities", "inserted")).isEqualTo(1);
         assertThat(count(response, "facilities", "failed")).isEqualTo(1);
@@ -120,7 +119,7 @@ class CourseSyncAggregationTest {
         when(persistenceService.upsertCourse("123", "1", inserted))
                 .thenReturn(new SyncItemResult<>(mock(Course.class), SyncItemStatus.INSERTED));
 
-        CourseSyncResponse response = courseSyncService.syncGangwonCourses();
+        CourseSyncResult response = courseSyncService.syncGangwonCourses();
 
         assertThat(count(response, "courses", "inserted")).isEqualTo(1);
         assertThat(count(response, "courses", "failed")).isEqualTo(1);

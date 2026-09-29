@@ -2,7 +2,6 @@ package com.example.classfit.course.service;
 
 import com.example.classfit.course.config.PublicDataProperties;
 import com.example.classfit.course.domain.Facility;
-import com.example.classfit.course.dto.CourseSyncResponse;
 import com.example.classfit.course.dto.PublicCourseItem;
 import com.example.classfit.course.dto.PublicFacilityItem;
 import com.example.classfit.course.dto.SyncResultCount;
@@ -34,7 +33,7 @@ public class CourseSyncService {
         this.persistenceService = persistenceService;
     }
 
-    public CourseSyncResponse syncGangwonCourses() {
+    public CourseSyncResult syncGangwonCourses() {
         properties.validateForSync();
         FacilitySyncResult facilityResult = syncFacilities();
 
@@ -42,7 +41,7 @@ public class CourseSyncService {
         for (Facility facility : facilityResult.facilities()) {
             courseResult = add(courseResult, syncCoursesForFacility(facility));
         }
-        return new CourseSyncResponse(facilityResult.counts(), courseResult);
+        return new CourseSyncResult(facilityResult.counts(), courseResult);
     }
 
     private FacilitySyncResult syncFacilities() {
