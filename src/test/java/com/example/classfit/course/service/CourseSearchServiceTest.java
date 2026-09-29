@@ -136,7 +136,9 @@ class CourseSearchServiceTest {
 
     @Test
     void selectedDayMatchesCoursesContainingOtherDaysAndFiltersBeforePaging() {
-        Facility facility = persistenceService.upsertFacility(facility("weekday-test", "days", "요일 시설", "51130"));
+        Facility facility = persistenceService
+                .upsertFacility(facility("weekday-test", "days", "요일 시설", "51130"))
+                .entity();
         String[] masks = {"1000000", "1110000", "1010100", "0101000", "0010000", null, "0000000", "x000000"};
         for (int i = 0; i < masks.length; i++) {
             persistenceService.upsertCourse("weekday-test", "days", new PublicCourseItem(
