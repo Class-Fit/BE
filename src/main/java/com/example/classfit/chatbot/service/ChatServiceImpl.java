@@ -18,11 +18,21 @@ import com.example.classfit.chatbot.dto.res.RecommendationResult;
 import com.example.classfit.course.service.RecommendationCatalogService;
 import com.example.classfit.inbody.service.InBodyService;
 import com.example.classfit.inbody.dto.res.InBodyCreateRes;
-import com.example.classfit.inbody.exception.InBodyErrorCode;
 import com.example.classfit.common.exception.CommonErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.LinkedHashMap;
+import java.util.Objects;
+import java.util.UUID;
+import java.time.Instant;
+import com.example.classfit.chatbot.dto.res.RecommendationDecision;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.dao.OptimisticLockingFailureException;
+import jakarta.persistence.OptimisticLockException;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ChatServiceImpl implements ChatService {
@@ -42,6 +53,7 @@ public class ChatServiceImpl implements ChatService {
     private final RecommendationCatalogService catalog;
     private final RecommendationService recommendationService;
     private final ObjectMapper objectMapper;
+    private final PlatformTransactionManager transactionManager;
 
     @Override
     @Transactional
@@ -66,7 +78,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.NEVER)
     public ChatMessageRes sendMessage(
             Long memberId,
             Long conversationId,
@@ -78,20 +90,47 @@ public class ChatServiceImpl implements ChatService {
                 || request.content().length() > 4000) {
             throw new BusinessException(CommonErrorCode.INVALID_REQUEST);
         }
-        Conversation conversation = conversationRepository
-                .findById(conversationId)
-                .orElseThrow(() ->
-                        new BusinessException(
-                                ChatbotErrorCode.CONVERSATION_NOT_FOUND
-                        )
-                );
-
-        // 본인의 채팅방인지 확인
-        if (!conversation.getMember().getId().equals(memberId)) {
-            throw new BusinessException(
-                    ChatbotErrorCode.CONVERSATION_ACCESS_DENIED
-            );
+        String token = UUID.randomUUID().toString();
+        boolean prepared = false;
+        boolean completed = false;
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        try {
+            PreparedRequest input = transaction.execute(status -> prepare(memberId, conversationId, request, token));
+            prepared = true;
+            // 이 시점에는 저장 트랜잭션과 DB 커넥션이 모두 반환되어 있다.
+            RecommendationDecision decision = aiService.recommend(input.messages(), input.context());
+            ChatMessageRes response = transaction.execute(status -> complete(memberId, conversationId, token, input, decision));
+            completed = true;
+            return response;
+        } catch (OptimisticLockingFailureException | OptimisticLockException exception) {
+            throw new BusinessException(ChatbotErrorCode.CONVERSATION_CONFLICT);
+        } finally {
+            if (prepared && !completed) {
+                try {
+                    transaction.executeWithoutResult(status -> conversationRepository.findById(conversationId)
+                            .ifPresent(conversation -> conversation.releaseRequest(token)));
+                } catch (RuntimeException cleanupFailure) {
+                    log.warn("대화 요청 정리 실패: conversationId={}", conversationId, cleanupFailure);
+                }
+            }
         }
+    }
+
+    private Conversation ownedConversation(Long memberId, Long conversationId) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new BusinessException(ChatbotErrorCode.CONVERSATION_NOT_FOUND));
+        if (!conversation.getMember().getId().equals(memberId)) {
+            throw new BusinessException(ChatbotErrorCode.CONVERSATION_ACCESS_DENIED);
+        }
+        return conversation;
+    }
+
+    private PreparedRequest prepare(Long memberId, Long conversationId, ChatMessageReq request, String token) {
+        Conversation conversation = ownedConversation(memberId, conversationId);
+        conversation.claimRequest(token, Instant.now());
+        // 경쟁 요청은 AI 호출 전에 버전 검증으로 차단한다.
+        conversationRepository.flush();
 
         // USER 메시지 저장
         ChatMessage userMessage = ChatMessage.builder()
@@ -109,8 +148,8 @@ public class ChatServiceImpl implements ChatService {
                                 conversationId
                         );
 
-        // GPT 호출
-        InBodyCreateRes inBody = latestInBody(memberId);
+        // AI에 전달할 데이터는 트랜잭션 안에서 모두 읽는다.
+        InBodyCreateRes inBody = inBodyService.findLatestInBody(memberId).orElse(null);
         var context = new LinkedHashMap<String, Object>();
         context.put("gender", conversation.getMember().getGender());
         context.put("latestInBody", inBody == null ? null : java.util.Map.of(
@@ -133,9 +172,19 @@ public class ChatServiceImpl implements ChatService {
         context.put("candidateSports", conversation.candidateSports());
         context.put("selectedCandidateSport", conversation.getSelectedCandidateSport());
         context.put("candidateRegionName", conversation.getCandidateRegionName());
-        RecommendationResult recommendation = recommendationService.resolve(conversation,
-                aiService.recommend(messages, toJson(context)), inBody != null,
-                conversation.getMember().getGender() != null);
+        return new PreparedRequest(List.copyOf(messages), toJson(context), conversation.getVersion(),
+                inBody != null, conversation.getMember().getGender() != null);
+    }
+
+    private ChatMessageRes complete(Long memberId, Long conversationId, String token,
+                                    PreparedRequest input, RecommendationDecision decision) {
+        Conversation conversation = ownedConversation(memberId, conversationId);
+        if (!conversation.ownsRequest(token) || !Objects.equals(conversation.getVersion(), input.version())) {
+            throw new BusinessException(ChatbotErrorCode.CONVERSATION_CONFLICT);
+        }
+        RecommendationResult recommendation = recommendationService.resolve(conversation, decision,
+                input.hasInBody(), input.hasGender());
+        conversation.releaseRequest(token);
         String aiResponse = recommendation.content();
 
         // GPT 응답 저장
@@ -204,14 +253,8 @@ public class ChatServiceImpl implements ChatService {
                 ))
                 .toList();
     }
-    private InBodyCreateRes latestInBody(Long memberId) {
-        try {
-            return inBodyService.getLatestInBody(memberId);
-        } catch (BusinessException exception) {
-            if (exception.getErrorCode() == InBodyErrorCode.INBODY_NOT_FOUND) return null;
-            throw exception;
-        }
-    }
+    private record PreparedRequest(List<ChatMessage> messages, String context, Long version,
+                                   boolean hasInBody, boolean hasGender) {}
 
     private String toJson(Object value) {
         try {

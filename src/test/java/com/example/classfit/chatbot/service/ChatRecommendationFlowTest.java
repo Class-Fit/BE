@@ -43,14 +43,17 @@ class ChatRecommendationFlowTest {
             return message;
         });
         when(messages.findAllByConversationIdOrderByCreatedAtAsc(10L)).thenAnswer(invocation -> List.copyOf(saved));
-        when(inBody.getLatestInBody(1L)).thenThrow(new BusinessException(InBodyErrorCode.INBODY_NOT_FOUND));
+        when(inBody.findLatestInBody(1L)).thenReturn(Optional.empty());
         when(ai.recommend(anyList(), anyString())).thenReturn(
                 new RecommendationDecision("수영을 찾아볼게요.", "SEARCH", "EXPLICIT", "수영", "원주시"));
         var card = new CourseSearchResponse(42L, "실제 수영반", "12", "수영", "시설", "주소", "10:00", "11:00", "월", 30000);
         when(courses.searchCoursesBySportCodes("51130", List.of("12"), 0, 4))
                 .thenReturn(new PageResponse<>(List.of(card), 0, 4, 1, 1, true, true));
+        var transactions = mock(org.springframework.transaction.PlatformTransactionManager.class);
+        when(transactions.getTransaction(any())).thenAnswer(invocation ->
+                new org.springframework.transaction.support.SimpleTransactionStatus());
         var chat = new ChatServiceImpl(conversations, mock(MemberRepository.class), messages, ai, inBody,
-                catalog, new RecommendationService(courses, catalog), new ObjectMapper());
+                catalog, new RecommendationService(courses, catalog), new ObjectMapper(), transactions);
 
         var response = chat.sendMessage(1L, 10L, new ChatMessageReq("원주 수영 찾아줘"));
         assertThat(response.recommendation().courses()).containsExactly(card);

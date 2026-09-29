@@ -89,16 +89,16 @@ public class InBodyServiceImpl implements InBodyService {
     @Override
     public InBodyCreateRes getLatestInBody(Long memberId) {
 
+        return findLatestInBody(memberId)
+                .orElseThrow(() -> new BusinessException(InBodyErrorCode.INBODY_NOT_FOUND));
+    }
+
+    @Override
+    public java.util.Optional<InBodyCreateRes> findLatestInBody(Long memberId) {
         if (!memberRepository.existsById(memberId)) {
             throw new BusinessException(InBodyErrorCode.MEMBER_NOT_FOUND);
         }
-
-        InBody inBody = inBodyRepository
-                .findTopByMemberIdOrderByCreatedAtDesc(memberId)
-                .orElseThrow(() -> new BusinessException(InBodyErrorCode.INBODY_NOT_FOUND)
-                );
-
-        return toResponse(inBody);
+        return inBodyRepository.findTopByMemberIdOrderByCreatedAtDesc(memberId).map(this::toResponse);
     }
 
     private InBodyCreateRes toResponse(InBody inBody) {
