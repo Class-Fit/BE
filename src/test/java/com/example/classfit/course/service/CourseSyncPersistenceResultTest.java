@@ -9,7 +9,6 @@ import com.example.classfit.course.repository.FacilityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Method;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,9 +35,9 @@ class CourseSyncPersistenceResultTest {
         when(facilityRepository.findByBusinessRegistrationNumberAndFacilitySerialNumber("123", "1"))
                 .thenReturn(Optional.empty());
 
-        Object result = invoke("upsertFacility", new Class<?>[]{PublicFacilityItem.class}, facility());
+        SyncItemResult<Facility> result = persistenceService.upsertFacility(facility());
 
-        assertThat(statusName(result)).isEqualTo("INSERTED");
+        assertThat(result.status()).isEqualTo(SyncItemStatus.INSERTED);
         verify(facilityRepository).save(any(Facility.class));
     }
 
@@ -48,13 +47,11 @@ class CourseSyncPersistenceResultTest {
         when(facilityRepository.findByBusinessRegistrationNumberAndFacilitySerialNumber("123", "1"))
                 .thenReturn(Optional.of(existing));
 
-        Object result = invoke(
-                "upsertFacility",
-                new Class<?>[]{PublicFacilityItem.class},
+        SyncItemResult<Facility> result = persistenceService.upsertFacility(
                 facility("변경된 시설", "상세 주소")
         );
 
-        assertThat(statusName(result)).isEqualTo("UPDATED");
+        assertThat(result.status()).isEqualTo(SyncItemStatus.UPDATED);
         assertThat(existing.getName()).isEqualTo("변경된 시설");
         verify(facilityRepository).save(existing);
     }
@@ -65,13 +62,11 @@ class CourseSyncPersistenceResultTest {
         when(facilityRepository.findByBusinessRegistrationNumberAndFacilitySerialNumber("123", "1"))
                 .thenReturn(Optional.of(existing));
 
-        Object result = invoke(
-                "upsertFacility",
-                new Class<?>[]{PublicFacilityItem.class},
+        SyncItemResult<Facility> result = persistenceService.upsertFacility(
                 facility("  테스트 시설  ", "   ")
         );
 
-        assertThat(statusName(result)).isEqualTo("UNCHANGED");
+        assertThat(result.status()).isEqualTo(SyncItemStatus.UNCHANGED);
         verify(facilityRepository, never()).save(any());
     }
 
@@ -83,9 +78,9 @@ class CourseSyncPersistenceResultTest {
         when(courseRepository.findByFacilityIdAndCourseNumber(null, "100"))
                 .thenReturn(Optional.empty());
 
-        Object result = invokeCourse(course());
+        SyncItemResult<Course> result = persistenceService.upsertCourse("123", "1", course());
 
-        assertThat(statusName(result)).isEqualTo("INSERTED");
+        assertThat(result.status()).isEqualTo(SyncItemStatus.INSERTED);
         verify(courseRepository).save(any(Course.class));
     }
 
@@ -98,9 +93,11 @@ class CourseSyncPersistenceResultTest {
         when(courseRepository.findByFacilityIdAndCourseNumber(null, "100"))
                 .thenReturn(Optional.of(existing));
 
-        Object result = invokeCourse(course("변경된 강좌", "새 설명"));
+        SyncItemResult<Course> result = persistenceService.upsertCourse(
+                "123", "1", course("변경된 강좌", "새 설명")
+        );
 
-        assertThat(statusName(result)).isEqualTo("UPDATED");
+        assertThat(result.status()).isEqualTo(SyncItemStatus.UPDATED);
         assertThat(existing.getName()).isEqualTo("변경된 강좌");
         verify(courseRepository).save(existing);
     }
@@ -114,39 +111,12 @@ class CourseSyncPersistenceResultTest {
         when(courseRepository.findByFacilityIdAndCourseNumber(null, "100"))
                 .thenReturn(Optional.of(existing));
 
-        Object result = invokeCourse(course(" 테스트 강좌 ", ""));
-
-        assertThat(statusName(result)).isEqualTo("UNCHANGED");
-        verify(courseRepository, never()).save(any());
-    }
-
-    private Object invokeCourse(PublicCourseItem item) {
-        return invoke(
-                "upsertCourse",
-                new Class<?>[]{String.class, String.class, PublicCourseItem.class},
-                "123", "1", item
+        SyncItemResult<Course> result = persistenceService.upsertCourse(
+                "123", "1", course(" 테스트 강좌 ", "")
         );
-    }
 
-    private Object invoke(String methodName, Class<?>[] parameterTypes, Object... arguments) {
-        try {
-            Method method = CourseSyncPersistenceService.class.getMethod(methodName, parameterTypes);
-            return method.invoke(persistenceService, arguments);
-        } catch (ReflectiveOperationException exception) {
-            throw new AssertionError(exception);
-        }
-    }
-
-    private String statusName(Object result) {
-        if (result == null) {
-            return null;
-        }
-        try {
-            Object status = result.getClass().getMethod("status").invoke(result);
-            return status.toString();
-        } catch (ReflectiveOperationException exception) {
-            return null;
-        }
+        assertThat(result.status()).isEqualTo(SyncItemStatus.UNCHANGED);
+        verify(courseRepository, never()).save(any());
     }
 
     private PublicFacilityItem facility() {

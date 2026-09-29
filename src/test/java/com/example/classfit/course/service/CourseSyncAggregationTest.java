@@ -5,13 +5,13 @@ import com.example.classfit.course.domain.Course;
 import com.example.classfit.course.domain.Facility;
 import com.example.classfit.course.dto.PublicCourseItem;
 import com.example.classfit.course.dto.PublicFacilityItem;
+import com.example.classfit.course.dto.SyncResultCount;
 import com.example.classfit.course.external.PublicDataPage;
 import com.example.classfit.course.external.VoucherCourseApiClient;
 import com.example.classfit.course.external.VoucherFacilityApiClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -67,17 +67,8 @@ class CourseSyncAggregationTest {
 
         CourseSyncResult response = courseSyncService.syncGangwonCourses();
 
-        assertThat(count(response, "facilities", "inserted")).isEqualTo(1);
-        assertThat(count(response, "facilities", "updated")).isZero();
-        assertThat(count(response, "facilities", "unchanged")).isZero();
-        assertThat(count(response, "facilities", "skipped")).isEqualTo(1);
-        assertThat(count(response, "facilities", "failed")).isZero();
-
-        assertThat(count(response, "courses", "inserted")).isEqualTo(1);
-        assertThat(count(response, "courses", "updated")).isEqualTo(1);
-        assertThat(count(response, "courses", "unchanged")).isEqualTo(1);
-        assertThat(count(response, "courses", "skipped")).isEqualTo(1);
-        assertThat(count(response, "courses", "failed")).isZero();
+        assertThat(response.facilities()).isEqualTo(new SyncResultCount(1, 0, 0, 1, 0));
+        assertThat(response.courses()).isEqualTo(new SyncResultCount(1, 1, 1, 1, 0));
         verify(persistenceService, never()).upsertCourse(anyString(), anyString(), eq(course("")));
     }
 
@@ -97,8 +88,8 @@ class CourseSyncAggregationTest {
 
         CourseSyncResult response = courseSyncService.syncGangwonCourses();
 
-        assertThat(count(response, "facilities", "inserted")).isEqualTo(1);
-        assertThat(count(response, "facilities", "failed")).isEqualTo(1);
+        assertThat(response.facilities().inserted()).isEqualTo(1);
+        assertThat(response.facilities().failed()).isEqualTo(1);
         verify(courseApiClient).fetchCourses("456", "2", 1);
     }
 
@@ -121,19 +112,9 @@ class CourseSyncAggregationTest {
 
         CourseSyncResult response = courseSyncService.syncGangwonCourses();
 
-        assertThat(count(response, "courses", "inserted")).isEqualTo(1);
-        assertThat(count(response, "courses", "failed")).isEqualTo(1);
+        assertThat(response.courses().inserted()).isEqualTo(1);
+        assertThat(response.courses().failed()).isEqualTo(1);
         verify(persistenceService).upsertCourse("123", "1", inserted);
-    }
-
-    private int count(Object response, String groupMethod, String countMethod) {
-        try {
-            Method group = response.getClass().getMethod(groupMethod);
-            Object counts = group.invoke(response);
-            return (int) counts.getClass().getMethod(countMethod).invoke(counts);
-        } catch (ReflectiveOperationException exception) {
-            return -1;
-        }
     }
 
     private PublicFacilityItem facility(String businessNumber, String serialNumber) {
