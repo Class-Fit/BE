@@ -46,6 +46,22 @@ class MemberSecurityTest {
                 .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
     }
 
+    @Test
+    void chatRequiresLoginAndUsesPrincipalInsteadOfSuppliedMemberId() throws Exception {
+        mvc.perform(get("/api/chat/conversations").param("memberId", "1"))
+                .andExpect(status().isUnauthorized());
+        Member member = members.saveAndFlush(Member.createOAuthMember(
+                OAuthProvider.KAKAO, "chat-owner", "회원", null, null));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/chat/conversations")
+                        .param("memberId", "999999")
+                        .with(oauth2Login().oauth2User(LoginMember.from(member))))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/chat/conversations").param("memberId", "999999")
+                        .with(oauth2Login().oauth2User(LoginMember.from(member))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
     /** 비로그인 사용자의 찜 목록 요청이 JSON 401로 거부되는지 검증한다. */
     @Test
     void anonymousFavoriteRequestReturnsJson401() throws Exception {

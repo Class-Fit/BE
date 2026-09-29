@@ -134,6 +134,38 @@ class CourseSearchServiceTest {
                 .containsExactly("춘천 수영_특강");
     }
 
+    @Test
+    void selectedDayMatchesCoursesContainingOtherDaysAndFiltersBeforePaging() {
+        Facility facility = persistenceService.upsertFacility(facility("weekday-test", "days", "요일 시설", "51130"));
+        String[] masks = {"1000000", "1110000", "1010100", "0101000", "0010000", null, "0000000", "x000000"};
+        for (int i = 0; i < masks.length; i++) {
+            persistenceService.upsertCourse("weekday-test", "days", new PublicCourseItem(
+                    "weekday-test", "days", "d" + i, "중급 수영 " + i, i % 2 == 0 ? "12" : "112",
+                    "수영", "강사", "10:00", "11:00", masks[i], 10000, "설명"));
+        }
+        var first = courseService.searchCoursesByDays("51130", java.util.List.of("12", "112"), "1000000", "중급", 0, 2);
+        var second = courseService.searchCoursesByDays("51130", java.util.List.of("12", "112"), "1000000", "중급", 1, 2);
+        assertThat(first.totalCount()).isEqualTo(3);
+        assertThat(first.content()).extracting(CourseSearchResponse::weekdays).containsExactly("월, 수, 금", "월, 화, 수");
+        assertThat(second.content()).extracting(CourseSearchResponse::weekdays).containsExactly("월");
+        assertThat(second.last()).isTrue();
+        assertThat(courseService.searchCoursesByDays("51130", java.util.List.of("12", "112"), "1010000", "중급", 0, 10).totalCount()).isEqualTo(4);
+        assertThat(courseService.searchCoursesByDays("51130", java.util.List.of("12", "112"), "0101000", "중급", 0, 10).totalCount()).isEqualTo(2);
+        assertThat(courseService.searchCoursesByDays("51130", java.util.List.of("12", "112"), "1000000", "초급", 0, 10).content()).isEmpty();
+    }
+
+    @Test
+    void weekendIncludesMixedWeekdayClasses() {
+        persistenceService.upsertFacility(facility("weekend-test", "days", "주말 시설", "51130"));
+        for (String mask : java.util.List.of("1000010", "0000001", "1111100")) {
+            persistenceService.upsertCourse("weekend-test", "days", new PublicCourseItem(
+                    "weekend-test", "days", mask, "중급 수영", "12", "수영", "강사",
+                    "10:00", "11:00", mask, 10000, "설명"));
+        }
+        assertThat(courseService.searchFilteredCourses("51130", java.util.List.of("12"), true, "중급", 0, 4).content())
+                .extracting(CourseSearchResponse::weekdays).containsExactlyInAnyOrder("월, 토", "일");
+    }
+
     private PageResponse<CourseSearchResponse> search(
             String localCode,
             String sportCode,

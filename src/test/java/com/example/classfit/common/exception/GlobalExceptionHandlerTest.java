@@ -74,8 +74,20 @@ class GlobalExceptionHandlerTest {
                         .value("요청값이 올바르지 않습니다."));
     }
 
+    @Test
+    void convertsConversationConflictTo409() throws Exception {
+        mockMvc.perform(get("/test/conversation-conflict"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("CHATBOT409_CONFLICT"));
+    }
+
     @RestController
     static class TestController {
+
+        @GetMapping("/test/conversation-conflict")
+        void conflict() {
+            throw new BusinessException(com.example.classfit.chatbot.exception.ChatbotErrorCode.CONVERSATION_CONFLICT);
+        }
 
         @GetMapping("/test/business-exception")
         void throwBusinessException() {

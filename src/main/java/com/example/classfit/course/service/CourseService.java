@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
+import java.util.List;
+import java.util.ArrayList;
 
 /** 강좌 동기화 데이터의 검색과 상세 조회 규칙을 담당한다. */
 @Service
@@ -53,6 +55,54 @@ public class CourseService {
 
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    public PageResponse<CourseSearchResponse> searchCoursesBySportCodes(
+            String localCode, List<String> sportCodes, int page, int size) {
+        return searchRecommendation(localCode, sportCodes, "", "", page, size);
+    }
+
+    /** 이전 주말 조건도 동일한 '선택 요일 포함' 규칙으로 적용한다. */
+    public PageResponse<CourseSearchResponse> searchFilteredCourses(
+            String localCode, List<String> sportCodes, boolean weekendOnly, String level, int page, int size) {
+        return searchRecommendation(localCode, sportCodes, weekendOnly ? "0000011" : "", level, page, size);
+    }
+
+    /** 선택한 요일 중 하나 이상이 포함되면 다른 요일 수업이 있어도 검색한다. */
+    public PageResponse<CourseSearchResponse> searchCoursesByDays(
+            String localCode, List<String> sportCodes, String selectedDays, String level, int page, int size) {
+        if (selectedDays == null || !selectedDays.matches("[01]{7}") || !selectedDays.contains("1")) {
+            throw new BusinessException(CommonErrorCode.INVALID_REQUEST);
+        }
+        return searchRecommendation(localCode, sportCodes, selectedDays, level, page, size);
+    }
+
+    private PageResponse<CourseSearchResponse> searchRecommendation(
+            String localCode, List<String> sportCodes, String selectedDays, String level, int page, int size) {
+        if (normalize(localCode) == null || sportCodes == null || sportCodes.isEmpty()
+                || sportCodes.stream().anyMatch(code -> normalize(code) == null)
+                || page < 0 || page > 10_000 || size < 1 || size > 100) {
+            throw new BusinessException(CommonErrorCode.INVALID_REQUEST);
+        }
+        String keyword = normalize(level);
+        if (keyword != null && !List.of("초급", "중급", "고급").contains(keyword)) {
+            throw new BusinessException(CommonErrorCode.INVALID_REQUEST);
+        }
+        List<String> codes = sportCodes.stream().map(String::trim).distinct().toList();
+        Specification<Course> specification = buildSearchSpecification(localCode.trim(), null, keyword)
+                .and((root, query, cb) -> root.get("sportCode").in(codes));
+        if (!selectedDays.isEmpty()) {
+            int selected = Integer.parseInt(selectedDays, 2);
+            List<String> masks = new ArrayList<>();
+            for (int mask = 1; mask < 128; mask++) {
+                if ((mask & selected) != 0) {
+                    masks.add(String.format("%7s", Integer.toBinaryString(mask)).replace(' ', '0'));
+                }
+            }
+            specification = specification.and((root, query, cb) -> root.get("weekdayMask").in(masks));
+        }
+        return PageResponse.from(courseRepository.findAll(specification,
+                PageRequest.of(page, size, Sort.by("id").descending())).map(CourseSearchResponse::from));
     }
 
     private Specification<Course> buildSearchSpecification(
