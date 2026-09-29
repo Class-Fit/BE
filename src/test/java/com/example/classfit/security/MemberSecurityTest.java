@@ -70,6 +70,17 @@ class MemberSecurityTest {
                 .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
     }
 
+    /** 메인 화면 공개 데이터는 로그인하지 않은 사용자도 조회할 수 있는지 검증한다. */
+    @Test
+    void anonymousUserCanReadHome() throws Exception {
+        mvc.perform(get("/api/home"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.member.loggedIn").value(false))
+                .andExpect(jsonPath("$.data.popularCourses").isArray())
+                .andExpect(jsonPath("$.data.latestCourses").isArray());
+    }
+
     /** 로그인한 회원이 자신의 빈 찜 목록을 정상적으로 조회할 수 있는지 검증한다. */
     @Test
     void authenticatedMemberCanReadFavorites() throws Exception {
