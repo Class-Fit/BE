@@ -8,11 +8,13 @@ import com.example.classfit.course.dto.SyncResultCount;
 import com.example.classfit.course.external.PublicDataPage;
 import com.example.classfit.course.external.VoucherCourseApiClient;
 import com.example.classfit.course.external.VoucherFacilityApiClient;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 public class CourseSyncService {
 
@@ -62,6 +64,12 @@ public class CourseSyncService {
                     facilities.add(result.entity());
                     counts = counts.add(result.status());
                 } catch (RuntimeException exception) {
+                    log.warn(
+                            "시설 저장 실패: brno={}, facil_sn={}, exceptionType={}",
+                            item.businessRegistrationNumber(),
+                            item.facilitySerialNumber(),
+                            exception.getClass().getName()
+                    );
                     counts = counts.fail();
                 }
             }
@@ -98,6 +106,13 @@ public class CourseSyncService {
                     );
                     counts = counts.add(result.status());
                 } catch (RuntimeException exception) {
+                    log.warn(
+                            "강좌 저장 실패: brno={}, facil_sn={}, course_no={}, exceptionType={}",
+                            facility.getBusinessRegistrationNumber(),
+                            facility.getFacilitySerialNumber(),
+                            item.courseNumber(),
+                            exception.getClass().getName()
+                    );
                     counts = counts.fail();
                 }
             }

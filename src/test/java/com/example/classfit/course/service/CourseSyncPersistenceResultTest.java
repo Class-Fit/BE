@@ -119,6 +119,32 @@ class CourseSyncPersistenceResultTest {
         verify(courseRepository, never()).save(any());
     }
 
+    @Test
+    void usesNormalizedFacilityAndCourseIdentifiersForLookup() {
+        Facility facility = Facility.from(facility());
+        Course course = Course.from(facility, course());
+        PublicFacilityItem paddedFacility = new PublicFacilityItem(
+                " 123 ", " 1 ", "테스트 시설", "51", "강원", "51110", "춘천시",
+                "강원도 춘천시", "상세 주소", "12345", "12", "수영"
+        );
+        PublicCourseItem paddedCourse = new PublicCourseItem(
+                " 123 ", " 1 ", " 100 ", "테스트 강좌", "12", "수영", "강사",
+                "10:00", "11:00", "1000000", 10000, "설명"
+        );
+        when(facilityRepository.findByBusinessRegistrationNumberAndFacilitySerialNumber("123", "1"))
+                .thenReturn(Optional.of(facility));
+        when(courseRepository.findByFacilityIdAndCourseNumber(null, "100"))
+                .thenReturn(Optional.of(course));
+
+        SyncItemResult<Facility> facilityResult = persistenceService.upsertFacility(paddedFacility);
+        SyncItemResult<Course> courseResult = persistenceService.upsertCourse(" 123 ", " 1 ", paddedCourse);
+
+        assertThat(facilityResult.status()).isEqualTo(SyncItemStatus.UNCHANGED);
+        assertThat(courseResult.status()).isEqualTo(SyncItemStatus.UNCHANGED);
+        verify(facilityRepository, never()).save(any());
+        verify(courseRepository, never()).save(any());
+    }
+
     private PublicFacilityItem facility() {
         return facility("테스트 시설", "상세 주소");
     }

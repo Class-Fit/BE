@@ -28,8 +28,8 @@ public class CourseSyncPersistenceService {
     public SyncItemResult<Facility> upsertFacility(PublicFacilityItem item) {
         return facilityRepository
                 .findByBusinessRegistrationNumberAndFacilitySerialNumber(
-                        item.businessRegistrationNumber(),
-                        item.facilitySerialNumber()
+                        normalizeIdentifier(item.businessRegistrationNumber()),
+                        normalizeIdentifier(item.facilitySerialNumber())
                 )
                 .map(existing -> updateFacility(existing, item))
                 .orElseGet(() -> new SyncItemResult<>(
@@ -46,13 +46,16 @@ public class CourseSyncPersistenceService {
     ) {
         Facility facility = facilityRepository
                 .findByBusinessRegistrationNumberAndFacilitySerialNumber(
-                        businessRegistrationNumber,
-                        facilitySerialNumber
+                        normalizeIdentifier(businessRegistrationNumber),
+                        normalizeIdentifier(facilitySerialNumber)
                 )
                 .orElseThrow(() -> new IllegalStateException("등록시설을 찾을 수 없습니다."));
 
         return courseRepository
-                .findByFacilityIdAndCourseNumber(facility.getId(), item.courseNumber())
+                .findByFacilityIdAndCourseNumber(
+                        facility.getId(),
+                        normalizeIdentifier(item.courseNumber())
+                )
                 .map(existing -> updateCourse(existing, facility, item))
                 .orElseGet(() -> new SyncItemResult<>(
                         courseRepository.save(Course.from(facility, item)),
@@ -76,5 +79,9 @@ public class CourseSyncPersistenceService {
             return new SyncItemResult<>(course, SyncItemStatus.UNCHANGED);
         }
         return new SyncItemResult<>(courseRepository.save(course), SyncItemStatus.UPDATED);
+    }
+
+    private String normalizeIdentifier(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

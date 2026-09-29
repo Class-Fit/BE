@@ -11,6 +11,9 @@ import com.example.classfit.course.external.VoucherCourseApiClient;
 import com.example.classfit.course.external.VoucherFacilityApiClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.util.List;
 
@@ -18,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(OutputCaptureExtension.class)
 class CourseSyncAggregationTest {
 
     PublicDataProperties properties;
@@ -73,13 +77,13 @@ class CourseSyncAggregationTest {
     }
 
     @Test
-    void countsFacilityPersistenceFailureAndContinues() {
+    void countsFacilityPersistenceFailureAndContinues(CapturedOutput output) {
         PublicFacilityItem failed = facility("123", "1");
         PublicFacilityItem inserted = facility("456", "2");
         when(facilityApiClient.fetchGangwonFacilities(1))
                 .thenReturn(new PublicDataPage<>(List.of(failed, inserted), 2));
         when(persistenceService.upsertFacility(failed))
-                .thenThrow(new IllegalStateException("시설 저장 실패"));
+                .thenThrow(new IllegalStateException("serviceKey=secret-facility-key"));
         Facility savedFacility = Facility.from(inserted);
         when(persistenceService.upsertFacility(inserted))
                 .thenReturn(new SyncItemResult<>(savedFacility, SyncItemStatus.INSERTED));
@@ -90,11 +94,13 @@ class CourseSyncAggregationTest {
 
         assertThat(response.facilities().inserted()).isEqualTo(1);
         assertThat(response.facilities().failed()).isEqualTo(1);
+        assertThat(output).contains("brno=123", "facil_sn=1", "IllegalStateException");
+        assertThat(output).doesNotContain("secret-facility-key");
         verify(courseApiClient).fetchCourses("456", "2", 1);
     }
 
     @Test
-    void countsCoursePersistenceFailureAndContinues() {
+    void countsCoursePersistenceFailureAndContinues(CapturedOutput output) {
         PublicFacilityItem item = facility("123", "1");
         Facility savedFacility = Facility.from(item);
         when(facilityApiClient.fetchGangwonFacilities(1))
@@ -106,7 +112,7 @@ class CourseSyncAggregationTest {
         when(courseApiClient.fetchCourses("123", "1", 1))
                 .thenReturn(new PublicDataPage<>(List.of(failed, inserted), 2));
         when(persistenceService.upsertCourse("123", "1", failed))
-                .thenThrow(new IllegalStateException("강좌 저장 실패"));
+                .thenThrow(new IllegalStateException("serviceKey=secret-course-key"));
         when(persistenceService.upsertCourse("123", "1", inserted))
                 .thenReturn(new SyncItemResult<>(mock(Course.class), SyncItemStatus.INSERTED));
 
@@ -114,6 +120,8 @@ class CourseSyncAggregationTest {
 
         assertThat(response.courses().inserted()).isEqualTo(1);
         assertThat(response.courses().failed()).isEqualTo(1);
+        assertThat(output).contains("brno=123", "facil_sn=1", "course_no=100", "IllegalStateException");
+        assertThat(output).doesNotContain("secret-course-key");
         verify(persistenceService).upsertCourse("123", "1", inserted);
     }
 
