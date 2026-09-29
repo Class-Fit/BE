@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ class HomeCourseRepositoryTest {
     @Autowired FacilityRepository facilityRepository;
     @Autowired FavoriteRepository favoriteRepository;
     @Autowired MemberRepository memberRepository;
+    @Autowired JdbcTemplate jdbcTemplate;
 
     List<Course> courses;
 
@@ -78,6 +80,19 @@ class HomeCourseRepositoryTest {
 
         assertThat(result).extracting(Course::getName)
                 .containsExactly("강좌 6", "강좌 5", "강좌 4", "강좌 3", "강좌 2", "강좌 1");
+    }
+
+    @Test
+    void createsCourseIdIndexForFavoriteCountLookup() {
+        Integer indexCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM pg_indexes
+                WHERE schemaname = current_schema()
+                  AND tablename = 'favorites'
+                  AND indexname = 'idx_favorites_course_id'
+                """, Integer.class);
+
+        assertThat(indexCount).isEqualTo(1);
     }
 
     private Member member(String providerId) {
