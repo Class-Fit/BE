@@ -5,6 +5,7 @@ import com.example.classfit.course.domain.Course;
 import com.example.classfit.member.domain.Member;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -19,6 +20,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
         name = "favorites",
+        indexes = @Index(name = "idx_favorites_course_id", columnList = "course_id"),
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_favorites_member_course",
                 columnNames = {"member_id", "course_id"}
