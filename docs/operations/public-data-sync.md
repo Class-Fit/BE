@@ -46,6 +46,51 @@ PUBLIC_DATA_SYNC_ENABLED=true
 
 시설 API 한도와 실제 데이터 갱신 주기는 공공데이터포털의 활용신청 상세 또는 제공기관 문의로 확인한 뒤 이 문서를 갱신한다. 확인 전에는 전체 동기화를 하루 한 번보다 자주 실행하지 않는다.
 
+## 실행 결과와 이력
+
+수동 실행과 정기 실행은 같은 실행 조정 서비스를 사용한다. 실행을 시작하면 먼저 `RUNNING` 이력을 저장하고, 처리가 끝나면 시설·강좌 결과를 각각 다음 기준으로 집계한다.
+
+| 결과 | 의미 |
+| --- | --- |
+| `inserted` | 외부 식별자로 조회되지 않아 새로 저장한 건수 |
+| `updated` | 기존 데이터와 비교해 실제 값이 달라 변경한 건수 |
+| `unchanged` | 공백 정리까지 적용한 뒤 기존 값과 같아 쓰기를 생략한 건수 |
+| `skipped` | 필수 외부 식별자가 없어 처리하지 않은 건수 |
+| `failed` | 해당 건 저장 중 오류가 발생한 건수 |
+
+관리자의 `POST /api/admin/courses/sync` 응답 예시는 다음과 같다.
+
+```json
+{
+  "success": true,
+  "data": {
+    "runId": 15,
+    "triggerType": "MANUAL",
+    "status": "SUCCESS",
+    "startedAt": "2026-09-29T03:00:00",
+    "finishedAt": "2026-09-29T03:06:00",
+    "facilities": {
+      "inserted": 1,
+      "updated": 2,
+      "unchanged": 966,
+      "skipped": 0,
+      "failed": 0
+    },
+    "courses": {
+      "inserted": 5,
+      "updated": 8,
+      "unchanged": 2163,
+      "skipped": 0,
+      "failed": 0
+    }
+  },
+  "errorCode": null,
+  "message": null
+}
+```
+
+건별 저장 실패가 하나라도 있으면 집계 결과를 응답하고 실행 상태를 `FAILED`로 기록한다. 외부 API 호출처럼 전체 실행을 중단시키는 예외가 발생하면 클라이언트에는 기존 예외 응답을 반환하되, 실행 이력에는 인증키나 원본 예외 메시지 대신 `SYNC_FAILED`와 안전한 공통 메시지만 저장한다. `REJECTED` 상태는 후속 중복 실행 방지 작업에서 사용한다.
+
 ## 재검증 절차
 
 1. 시설 API 1페이지의 HTTP 상태, `resultCode`, `totalCount`를 확인한다.
