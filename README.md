@@ -92,7 +92,7 @@ Spring Boot는 `.env` 파일을 자동으로 읽지 않습니다. 터미널에�
 - 신규 회원 역할은 `USER`입니다. 기존 회원의 프로필·역할은 재로그인 시 덮어쓰지 않습니다.
 - 이름·이메일·성별·키·몸무게는 없을 수 있으며 JSON의 null을 미입력으로 해석합니다.
 - DB 유니크 제약으로 중복 회원 생성을 막습니다. 동시에 최초 가입하면 한 요청은 안전한 로그인 실패를 받을 수 있습니다. 자동 재조회·재시도는 아직 구현하지 않았습니다.
-- 운영 CORS는 `CLASSFIT_FRONTEND_ORIGIN`의 정확한 Origin 하나만 credentials와 함께 허용합니다. 운영 세션 쿠키는 `Secure`, `HttpOnly`, `SameSite=None`이며 현재 단일 서버의 메모리 세션을 사용합니다.
+- 운영 CORS는 `CLASSFIT_FRONTEND_ORIGIN`의 정확한 Origin 하나만 credentials와 함께 허용합니다. 프론트 `app.<소유 도메인>`과 API `api.<소유 도메인>`을 같은 사이트에 배치하며, 운영 세션 쿠키는 `Secure`, `HttpOnly`, `SameSite=Lax`입니다. 현재 단일 서버의 메모리 세션을 사용합니다.
 
 ## AWS 운영 배포
 

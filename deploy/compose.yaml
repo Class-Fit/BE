@@ -2,7 +2,8 @@ services:
   app:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}
     env_file:
-      - runtime/app.env
+      - path: runtime/app.env
+        format: raw
     environment:
       SPRING_PROFILES_ACTIVE: prod
     restart: unless-stopped

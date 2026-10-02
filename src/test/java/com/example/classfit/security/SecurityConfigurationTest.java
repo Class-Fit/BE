@@ -34,13 +34,13 @@ class SecurityConfigurationTest {
     }
 
     @Test
-    void productionSessionCookieSupportsCrossSiteOauthSafely() throws IOException {
+    void productionSessionCookieUsesSecureSameSiteLax() throws IOException {
         List<PropertySource<?>> sources = new YamlPropertySourceLoader()
                 .load("application-prod", new ClassPathResource("application-prod.yaml"));
         PropertySource<?> production = sources.getFirst();
 
         assertThat(production.getProperty("server.servlet.session.cookie.secure")).isEqualTo(true);
         assertThat(production.getProperty("server.servlet.session.cookie.http-only")).isEqualTo(true);
-        assertThat(production.getProperty("server.servlet.session.cookie.same-site")).isEqualTo("none");
+        assertThat(production.getProperty("server.servlet.session.cookie.same-site")).isEqualTo("lax");
     }
 }

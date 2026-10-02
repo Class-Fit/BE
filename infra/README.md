@@ -18,8 +18,8 @@
 4. 출력의 RDS endpoint로 `DB_URL=jdbc:postgresql://ENDPOINT:5432/classfit?sslmode=require`를 만든다.
 5. `/classfit/prod/DB_URL`, `DB_USER`, `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET`, `OPENAI_API_KEY`, `CLASSFIT_FRONTEND_ORIGIN`도 Parameter Store `SecureString`으로 등록한다. 값은 터미널 출력이나 저장소 파일에 남기지 않는다.
 6. 첫 stack 출력의 ECR ARN과 EC2 instance ID를 사용해 `classfit-github-oidc.yaml` stack을 생성한다.
-7. GitHub `production` Environment variables에 `AWS_DEPLOY_ROLE_ARN`, `ECR_REPOSITORY`, `EC2_INSTANCE_ID`를 설정한다.
-8. DNS에 `api.<domain>` A record를 Elastic IP로 연결한다. 프록시가 뜬 뒤 Caddy가 인증서를 자동 발급한다.
+7. GitHub `production` Environment variables에 `AWS_DEPLOY_ROLE_ARN`, `ECR_REPOSITORY`, `EC2_INSTANCE_ID`, `CLASSFIT_DOMAIN`을 설정한다. `CLASSFIT_DOMAIN`은 실제 소유한 apex domain이며 프론트는 `app.<domain>`, API는 `api.<domain>`으로 같은 사이트에 배치한다.
+8. DNS에 `api.<domain>` A record를 Elastic IP로 연결하고, Vercel 프론트에는 `app.<domain>`을 연결한다. 두 주소가 같은 사이트여야 운영 세션 쿠키(`SameSite=Lax`)가 브라우저에서 전달된다. 기본 `*.vercel.app` 주소를 운영 프론트로 사용하지 않는다. 프록시가 뜬 뒤 Caddy가 인증서를 자동 발급한다.
 
 로컬 AWS CLI가 준비된 경우 생성 전에 다음을 실행한다.
 

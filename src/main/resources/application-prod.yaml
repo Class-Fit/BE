@@ -16,7 +16,7 @@ server:
       cookie:
         secure: true
         http-only: true
-        same-site: none
+        same-site: lax
 
 management:
   endpoints:

@@ -28,6 +28,7 @@ jobs:
       AWS_REGION: ap-northeast-2
       ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
       EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+      CLASSFIT_DOMAIN: ${{ vars.CLASSFIT_DOMAIN }}
 
     steps:
       - name: Checkout
@@ -57,27 +58,11 @@ jobs:
       - name: Send deployment through SSM
         id: command
         shell: bash
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
           set -euo pipefail
-          deploy_bundle=$(tar -czf - deploy | base64 | tr -d '\n')
-          parameters=$(jq -cn \
-            --arg bundle "$deploy_bundle" \
-            --arg sha "$GITHUB_SHA" \
-            '{commands:[
-              "set -euo pipefail",
-              "mkdir -p /opt/classfit/runtime",
-              ("printf %s " + ($bundle | @sh) + " | base64 -d | tar -xzf - -C /opt/classfit --strip-components=1"),
-              "chmod 0755 /opt/classfit/scripts/deploy.sh /opt/classfit/scripts/render-env.sh",
-              ("/opt/classfit/scripts/deploy.sh " + ($sha | @sh))
-            ]}')
-          command_id=$(aws ssm send-command \
-            --region "$AWS_REGION" \
-            --instance-ids "$EC2_INSTANCE_ID" \
-            --document-name AWS-RunShellScript \
-            --comment "ClassFit ${GITHUB_SHA}" \
-            --parameters "$parameters" \
-            --query 'Command.CommandId' \
-            --output text)
+          command_id=$(bash deploy/scripts/send-command.sh "$GITHUB_SHA")
           printf 'command_id=%s\n' "$command_id" >> "$GITHUB_OUTPUT"
 
       - name: Wait for deployment result

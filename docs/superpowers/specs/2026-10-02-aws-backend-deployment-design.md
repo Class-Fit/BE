@@ -109,7 +109,7 @@ EC2만 인터넷 요청을 받는다. RDS는 public access를 끄고, EC2에 연
 - DB 주소, 사용자명, 비밀번호는 환경변수로 받는다.
 - `server.forward-headers-strategy`로 Caddy가 전달한 원래 HTTPS 요청 정보를 반영한다.
 - 세션 쿠키는 `Secure`, `HttpOnly`를 사용한다.
-- 프론트와 API가 서로 다른 사이트인 배포 형태에 맞춰 `SameSite` 및 CORS credentials 정책을 함께 검증한다.
+- 프론트 `app.<소유 도메인>`과 API `api.<소유 도메인>`을 같은 사이트에 배치하고, `SameSite=Lax` 및 CORS credentials 정책을 함께 검증한다. 기본 `*.vercel.app` 주소는 운영 로그인에 사용하지 않는다.
 - CORS 허용 Origin은 실제 Vercel 운영 주소로 제한한다.
 - SQL 출력과 불필요한 운영 로그를 끈다.
 - Spring Boot Actuator의 health endpoint만 공개한다.

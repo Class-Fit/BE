@@ -29,7 +29,7 @@
 
 - 필수 운영 비밀값이 빠졌을 때 애플리케이션이 불완전한 기본값으로 실행되지 않고 시작에 실패해야 한다. Task 1에서 prod context 실패 테스트로 고정한다.
 - 신뢰하지 않는 Origin에는 CORS 허용 헤더가 없어야 하고, 지정 Vercel Origin에는 credentials가 허용돼야 한다. Task 2의 MVC 테스트로 고정한다.
-- 교차 사이트 OAuth 세션 쿠키는 `Secure`, `HttpOnly`, `SameSite=None`이어야 한다. Task 2의 설정 테스트로 고정한다.
+- 운영 프론트와 API는 같은 소유 도메인의 `app`/`api` 하위 도메인에 배치하며 OAuth 세션 쿠키는 `Secure`, `HttpOnly`, `SameSite=Lax`이어야 한다. Task 2의 설정 테스트로 고정한다.
 - 새 컨테이너가 unhealthy이면 직전 정상 SHA를 재실행하고 새 SHA를 정상 상태로 기록하지 않아야 한다. Task 3의 배포 스크립트 테스트로 고정한다.
 - health endpoint는 익명 요청에 `UP`만 제공하고 DB 주소나 component 상세를 공개하지 않아야 한다. Task 1의 MVC 테스트로 고정한다.
 
@@ -60,7 +60,7 @@ Expected: FAIL because `application-prod.yaml` does not exist and required produ
 
 - [ ] **Step 3: 운영 프로필과 Actuator 최소 구현**
 
-`build.gradle`에 `spring-boot-starter-actuator`를 추가한다. `application-prod.yaml`은 `DB_URL`, `DB_USER`, `DB_PASSWORD`, `CLASSFIT_FRONTEND_ORIGIN`을 환경변수로 받고 SQL 출력 비활성화, forwarded headers, secure session cookie, `SameSite=None`, health detail 비공개, scheduler 비활성화를 정의한다. `SecurityConfig`는 GET `/actuator/health`만 `permitAll`한다.
+`build.gradle`에 `spring-boot-starter-actuator`를 추가한다. `application-prod.yaml`은 `DB_URL`, `DB_USER`, `DB_PASSWORD`, `CLASSFIT_FRONTEND_ORIGIN`을 환경변수로 받고 SQL 출력 비활성화, forwarded headers, secure session cookie, `SameSite=Lax`, health detail 비공개, scheduler 비활성화를 정의한다. `SecurityConfig`는 GET `/actuator/health`만 `permitAll`한다.
 
 - [ ] **Step 4: Health 정보 비노출 MVC 테스트 작성**
 
@@ -107,7 +107,7 @@ Expected: FAIL because no `CorsConfigurationSource` is registered.
 
 - [ ] **Step 4: 쿠키 정책 테스트 보강**
 
-`SecurityConfigurationTest`에서 prod YAML을 읽어 `server.servlet.session.cookie.secure=true`, `http-only=true`, `same-site=none`을 단언한다. 누락되거나 빈 `CLASSFIT_FRONTEND_ORIGIN`으로 prod context가 뜨지 않는 테스트를 `ProductionConfigurationTest`에 추가한다.
+`SecurityConfigurationTest`에서 prod YAML을 읽어 `server.servlet.session.cookie.secure=true`, `http-only=true`, `same-site=lax`를 단언한다. 누락되거나 빈 `CLASSFIT_FRONTEND_ORIGIN`으로 prod context가 뜨지 않는 테스트를 `ProductionConfigurationTest`에 추가한다.
 
 - [ ] **Step 5: 관련 보안 테스트 통과 확인**
 
@@ -311,7 +311,7 @@ main 배포 workflow를 명시적으로 실행한다. `curl --fail https://api.C
 
 - [ ] **Step 7: 브라우저 계약 검증**
 
-Vercel 운영 Origin에서 credentialed API 요청의 CORS header와 cookie를 확인한다. Kakao 로그인 시작 → callback → `/api/members/me` 요청에서 동일 `JSESSIONID` 세션이 유지되는지 확인한다. 브라우저 개발자 도구에서 cookie가 Secure/HttpOnly/SameSite=None인지 확인한다.
+같은 사이트의 Vercel 운영 Origin(`app.<소유 도메인>`)에서 credentialed API 요청의 CORS header와 cookie를 확인한다. Kakao 로그인 시작 → callback → `/courses` 복귀 → `/api/members/me` 요청에서 동일 `JSESSIONID` 세션이 유지되는지 확인한다. 브라우저 개발자 도구에서 cookie가 Secure/HttpOnly/SameSite=Lax인지 확인한다.
 
 - [ ] **Step 8: 롤백과 재부팅 검증**
 
