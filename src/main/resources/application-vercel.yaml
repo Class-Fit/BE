@@ -1,0 +1,23 @@
+# Activate alongside existing deployment profiles, with vercel last.
+# Use explicit public URLs because the upstream connection is HTTP.
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            redirect-uri: https://fe-iota-drab.vercel.app/login/oauth2/code/kakao
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+        http-only: true
+        same-site: lax
+        path: /
+
+classfit:
+  web:
+    frontend-origin: https://fe-iota-drab.vercel.app
+    login-success-url: https://fe-iota-drab.vercel.app/courses
