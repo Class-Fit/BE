@@ -1,0 +1,8 @@
+[
+  {"ParameterKey": "AlertEmail", "ParameterValue": "REPLACE_IN_CONSOLE"},
+  {"ParameterKey": "ClassfitDomain", "ParameterValue": "REPLACE_IN_CONSOLE"},
+  {"ParameterKey": "DbUsername", "ParameterValue": "classfit"},
+  {"ParameterKey": "DbPasswordParameterName", "ParameterValue": "/classfit/prod/DB_PASSWORD"},
+  {"ParameterKey": "Ec2InstanceType", "ParameterValue": "t3.micro"},
+  {"ParameterKey": "DbInstanceClass", "ParameterValue": "db.t4g.micro"}
+]

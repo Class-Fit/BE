@@ -1,0 +1,232 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cost-conscious ClassFit production infrastructure in ap-northeast-2
+
+Parameters:
+  AlertEmail:
+    Type: String
+  ClassfitDomain:
+    Type: String
+  DbUsername:
+    Type: String
+    Default: classfit
+  DbPasswordParameterName:
+    Type: String
+    Default: /classfit/prod/DB_PASSWORD
+  Ec2InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t3.small]
+  DbInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.20.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags: [{Key: Name, Value: classfit-prod}]
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref Vpc
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.20.0.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags: [{Key: Name, Value: classfit-public-a}]
+  PrivateDbSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.20.10.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags: [{Key: Name, Value: classfit-db-a}]
+  PrivateDbSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.20.11.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags: [{Key: Name, Value: classfit-db-b}]
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet
+
+  Ec2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public HTTPS entrypoint without SSH
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0}
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0}
+  DbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: PostgreSQL from ClassFit EC2 only
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref Ec2SecurityGroup
+
+  AppRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: classfit-backend
+      ImageScanningConfiguration: {ScanOnPush: true}
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"keep 10 images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
+      Tags: [{Key: Project, Value: ClassFit}]
+
+  Ec2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ec2.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: ClassFitRuntimeRead
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                Resource: !GetAtt AppRepository.Arn
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/classfit/prod/*
+  Ec2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref Ec2Role]
+
+  AppInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref Ec2InstanceType
+      IamInstanceProfile: !Ref Ec2InstanceProfile
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds: [!Ref Ec2SecurityGroup]
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: {VolumeType: gp3, VolumeSize: 16, Encrypted: true, DeleteOnTermination: true}
+      UserData: !Base64 |
+          #!/bin/bash
+          set -euo pipefail
+          dnf install -y docker
+          systemctl enable --now docker
+          mkdir -p /usr/local/lib/docker/cli-plugins /opt/classfit/runtime
+          curl -fsSL https://github.com/docker/compose/releases/download/v2.40.3/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+          chmod 0755 /usr/local/lib/docker/cli-plugins/docker-compose
+          chown -R root:root /opt/classfit
+          chmod 0700 /opt/classfit/runtime
+      Tags:
+        - {Key: Name, Value: classfit-prod-app}
+        - {Key: Project, Value: ClassFit}
+  AppElasticIp:
+    Type: AWS::EC2::EIP
+    Properties: {Domain: vpc}
+  AppElasticIpAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt AppElasticIp.AllocationId
+      InstanceId: !Ref AppInstance
+
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: ClassFit private database subnets
+      SubnetIds: [!Ref PrivateDbSubnetA, !Ref PrivateDbSubnetB]
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      Engine: postgres
+      EngineVersion: '17.6'
+      DBInstanceClass: !Ref DbInstanceClass
+      DBName: classfit
+      MasterUsername: !Ref DbUsername
+      MasterUserPassword: !Sub '{{resolve:ssm-secure:${DbPasswordParameterName}}}'
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 25
+      StorageType: gp3
+      StorageEncrypted: true
+      BackupRetentionPeriod: 7
+      MultiAZ: false
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups: [!Ref DbSecurityGroup]
+      Tags: [{Key: Project, Value: ClassFit}]
+
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: classfit-monthly-cost
+        BudgetLimit: {Amount: 100, Unit: USD}
+        BudgetType: COST
+        TimeUnit: MONTHLY
+      NotificationsWithSubscribers:
+        - Notification: {ComparisonOperator: GREATER_THAN, NotificationType: ACTUAL, Threshold: 10, ThresholdType: PERCENTAGE}
+          Subscribers: [{Address: !Ref AlertEmail, SubscriptionType: EMAIL}]
+        - Notification: {ComparisonOperator: GREATER_THAN, NotificationType: ACTUAL, Threshold: 30, ThresholdType: PERCENTAGE}
+          Subscribers: [{Address: !Ref AlertEmail, SubscriptionType: EMAIL}]
+        - Notification: {ComparisonOperator: GREATER_THAN, NotificationType: ACTUAL, Threshold: 70, ThresholdType: PERCENTAGE}
+          Subscribers: [{Address: !Ref AlertEmail, SubscriptionType: EMAIL}]
+
+Outputs:
+  InstanceId: {Value: !Ref AppInstance}
+  ElasticIp: {Value: !Ref AppElasticIp}
+  DatabaseEndpoint: {Value: !GetAtt Database.Endpoint.Address}
+  EcrRepositoryName: {Value: !Ref AppRepository}
+  EcrRepositoryArn: {Value: !GetAtt AppRepository.Arn}
+  ParameterPrefix: {Value: /classfit/prod/}
+  ApiHostname: {Value: !Sub 'api.${ClassfitDomain}'}
