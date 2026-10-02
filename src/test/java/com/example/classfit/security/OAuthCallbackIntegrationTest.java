@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** 외부 HTTP 응답만 대체하고 실제 인가 코드 교환·회원 저장·세션 인증을 검증한다. */
-@SpringBootTest
+@SpringBootTest(properties = "classfit.oauth-success-url=https://fe-iota-drab.vercel.app/courses")
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OAuthCallbackIntegrationTest {
@@ -140,7 +140,7 @@ class OAuthCallbackIntegrationTest {
 
     private MockHttpSession login() throws Exception {
         MvcResult result = callback(begin()).andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/api/members/me")).andReturn();
+                .andExpect(redirectedUrl("https://fe-iota-drab.vercel.app/courses")).andReturn();
         return (MockHttpSession) result.getRequest().getSession(false);
     }
 

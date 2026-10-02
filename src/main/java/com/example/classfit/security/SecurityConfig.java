@@ -1,6 +1,7 @@
 package com.example.classfit.security;
 
 import com.example.classfit.security.oauth2.CustomOAuth2UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -31,7 +32,8 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, CustomOAuth2UserService userService,
                                             ApiAuthenticationEntryPoint entryPoint,
                                             ApiAccessDeniedHandler deniedHandler,
-                                            SecurityErrorResponseWriter writer) throws Exception {
+                                            SecurityErrorResponseWriter writer,
+                                            @Value("${classfit.oauth-success-url:/api/members/me}") String oauthSuccessUrl) throws Exception {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/swagger-ui/**", "/v3/api-docs/**").permitAll()
@@ -65,7 +67,7 @@ public class SecurityConfig {
                         .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)))
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(info -> info.userService(userService))
-                        .defaultSuccessUrl("/api/members/me", true)
+                        .defaultSuccessUrl(oauthSuccessUrl, true)
                         .failureHandler((request, response, exception) -> writer.write(response, 401,
                                 "OAUTH_LOGIN_FAILED", "카카오 로그인에 실패했습니다. 다시 시도해주세요.")));
         return http.build();

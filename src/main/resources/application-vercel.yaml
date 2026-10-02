@@ -1,0 +1,21 @@
+# Activate alongside any existing deployment profile: SPRING_PROFILES_ACTIVE=...,vercel
+# The browser stays on Vercel for both OAuth initiation and callback.
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            redirect-uri: https://fe-iota-drab.vercel.app/login/oauth2/code/kakao
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+        http-only: true
+        same-site: lax
+        path: /
+
+classfit:
+  oauth-success-url: https://fe-iota-drab.vercel.app/courses
