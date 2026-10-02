@@ -98,6 +98,8 @@ Spring Boot는 `.env` 파일을 자동으로 읽지 않습니다. 터미널에�
 
 운영 구조는 Vercel 프론트엔드 → `https://api.<CLASSFIT_DOMAIN>`의 Caddy → Spring Boot 컨테이너 → private RDS PostgreSQL입니다. `main` push 또는 수동 실행 시 CI 전체 검증을 먼저 통과한 뒤, commit SHA 태그의 `linux/amd64` 이미지만 ECR에 push하고 SSM Run Command로 EC2에 배포합니다. 장기 AWS access key와 SSH 포트는 사용하지 않습니다.
 
+운영에서 카카오 로그인에 성공하면 `CLASSFIT_FRONTEND_ORIGIN`의 `/courses`로 이동합니다. 로컬 실행은 기존 `/api/members/me` 이동을 유지합니다.
+
 GitHub `production` Environment에는 다음 비밀이 아닌 variable을 설정합니다.
 
 | variable | 역할 |

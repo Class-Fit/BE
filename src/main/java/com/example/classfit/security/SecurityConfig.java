@@ -4,6 +4,7 @@ import com.example.classfit.security.oauth2.CustomOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.web.cors.CorsConfiguration;
@@ -32,6 +33,7 @@ public class SecurityConfig {
      * @param entryPoint 인증되지 않은 요청의 오류 처리기
      * @param deniedHandler 접근 권한이 없는 요청의 오류 처리기
      * @param writer OAuth 실패의 JSON 응답 작성기
+     * @param loginSuccessUrl 로그인 성공 후 이동할 주소
      * @return 서비스의 HTTP 보안 필터 체인
      * @throws Exception 보안 필터 체인을 구성하지 못할 경우
      */
@@ -39,7 +41,9 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, CustomOAuth2UserService userService,
                                             ApiAuthenticationEntryPoint entryPoint,
                                             ApiAccessDeniedHandler deniedHandler,
-                                            SecurityErrorResponseWriter writer) throws Exception {
+                                            SecurityErrorResponseWriter writer,
+                                            @Value("${classfit.web.login-success-url:/api/members/me}") String loginSuccessUrl)
+            throws Exception {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
@@ -76,7 +80,7 @@ public class SecurityConfig {
                         .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)))
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(info -> info.userService(userService))
-                        .defaultSuccessUrl("/api/members/me", true)
+                        .defaultSuccessUrl(loginSuccessUrl, true)
                         .failureHandler((request, response, exception) -> writer.write(response, 401,
                                 "OAUTH_LOGIN_FAILED", "카카오 로그인에 실패했습니다. 다시 시도해주세요.")));
         return http.build();

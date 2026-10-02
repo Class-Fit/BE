@@ -30,6 +30,7 @@ management:
 classfit:
   web:
     frontend-origin: ${CLASSFIT_FRONTEND_ORIGIN}
+    login-success-url: ${CLASSFIT_FRONTEND_ORIGIN}/courses
 
 public-data:
   sync:

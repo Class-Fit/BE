@@ -34,6 +34,8 @@ class ProductionConfigurationTest {
         assertThat(environment.getProperty("public-data.sync.enabled")).isEqualTo("false");
         assertThat(production.getProperty("classfit.web.frontend-origin"))
                 .isEqualTo("${CLASSFIT_FRONTEND_ORIGIN}");
+        assertThat(production.getProperty("classfit.web.login-success-url"))
+                .isEqualTo("${CLASSFIT_FRONTEND_ORIGIN}/courses");
     }
 
     @Test
