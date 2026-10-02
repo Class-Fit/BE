@@ -59,7 +59,7 @@ for ((attempt = 1; attempt <= health_retries; attempt++)); do
   sleep "$health_interval_seconds"
 done
 
-if [[ "$healthy" == "true" ]]; then
+if [[ "$healthy" == "true" ]] && compose up -d caddy; then
   temporary_current=$(mktemp "$runtime_dir/current-image.tmp.XXXXXX")
   printf '%s\n' "$new_image_sha" > "$temporary_current"
   chmod 600 "$temporary_current"
@@ -68,7 +68,7 @@ if [[ "$healthy" == "true" ]]; then
   exit 0
 fi
 
-echo "deployment unhealthy; rolling back" >&2
+echo "deployment failed health or proxy startup; rolling back" >&2
 compose stop app >/dev/null 2>&1 || true
 if [[ -n "$previous_image_sha" ]]; then
   export IMAGE_TAG="$previous_image_sha"

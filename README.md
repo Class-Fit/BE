@@ -92,7 +92,23 @@ Spring Boot는 `.env` 파일을 자동으로 읽지 않습니다. 터미널에�
 - 신규 회원 역할은 `USER`입니다. 기존 회원의 프로필·역할은 재로그인 시 덮어쓰지 않습니다.
 - 이름·이메일·성별·키·몸무게는 없을 수 있으며 JSON의 null을 미입력으로 해석합니다.
 - DB 유니크 제약으로 중복 회원 생성을 막습니다. 동시에 최초 가입하면 한 요청은 안전한 로그인 실패를 받을 수 있습니다. 자동 재조회·재시도는 아직 구현하지 않았습니다.
-- CORS, 운영 쿠키 정책, 프록시, 다중 서버 세션 저장소는 배포·프론트 구조가 정해진 뒤 구성합니다.
+- 운영 CORS는 `CLASSFIT_FRONTEND_ORIGIN`의 정확한 Origin 하나만 credentials와 함께 허용합니다. 운영 세션 쿠키는 `Secure`, `HttpOnly`, `SameSite=None`이며 현재 단일 서버의 메모리 세션을 사용합니다.
+
+## AWS 운영 배포
+
+운영 구조는 Vercel 프론트엔드 → `https://api.<CLASSFIT_DOMAIN>`의 Caddy → Spring Boot 컨테이너 → private RDS PostgreSQL입니다. `main` push 또는 수동 실행 시 CI 전체 검증을 먼저 통과한 뒤, commit SHA 태그의 `linux/amd64` 이미지만 ECR에 push하고 SSM Run Command로 EC2에 배포합니다. 장기 AWS access key와 SSH 포트는 사용하지 않습니다.
+
+GitHub `production` Environment에는 다음 비밀이 아닌 variable을 설정합니다.
+
+| variable | 역할 |
+|---|---|
+| `AWS_DEPLOY_ROLE_ARN` | GitHub OIDC가 맡을 최소 권한 IAM role ARN |
+| `ECR_REPOSITORY` | CloudFormation이 만든 ECR repository 이름 |
+| `EC2_INSTANCE_ID` | SSM 명령을 받을 운영 EC2 instance ID |
+
+운영 비밀값은 `/classfit/prod/` 아래 SSM Parameter Store `SecureString`으로만 보관합니다. `DB_URL`, `DB_USER`, `DB_PASSWORD`, `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET`, `OPENAI_API_KEY`, `CLASSFIT_FRONTEND_ORIGIN`이 필요합니다. 실제 값, AWS account ID, DB endpoint는 저장소·Actions 로그·이미지에 넣지 않습니다. 자세한 생성 순서는 [`infra/README.md`](infra/README.md)를 따릅니다.
+
+배포 스크립트는 새 컨테이너의 `/actuator/health`가 정상일 때만 `current-image`를 갱신합니다. 실패하면 직전 정상 SHA를 다시 실행하고 Actions job을 실패시킵니다. 긴급 수동 롤백도 EC2에 SSH로 접속하는 대신 SSM Run Command에서 `/opt/classfit/scripts/deploy.sh <정상-SHA>`를 실행합니다. 운영 공공데이터 scheduler는 기본적으로 비활성화되어 있습니다.
 
 ## 테스트
 

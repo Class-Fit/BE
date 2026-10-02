@@ -2,10 +2,11 @@ name: CI
 
 # develop/main 대상 PR과 해당 브랜치의 push에서 실행한다.
 on:
+  workflow_call:
   pull_request:
     branches: [develop, main]
   push:
-    branches: [develop, main]
+    branches: [develop]
 
 # 같은 워크플로·ref에 새 실행이 생기면 이전 실행을 취소한다.
 concurrency:

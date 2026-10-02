@@ -1,0 +1,110 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  deploy:
+    name: ECR build and SSM deploy
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      AWS_REGION: ap-northeast-2
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push immutable image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+      - name: Send deployment through SSM
+        id: command
+        shell: bash
+        run: |
+          set -euo pipefail
+          deploy_bundle=$(tar -czf - deploy | base64 | tr -d '\n')
+          parameters=$(jq -cn \
+            --arg bundle "$deploy_bundle" \
+            --arg sha "$GITHUB_SHA" \
+            '{commands:[
+              "set -euo pipefail",
+              "mkdir -p /opt/classfit/runtime",
+              ("printf %s " + ($bundle | @sh) + " | base64 -d | tar -xzf - -C /opt/classfit --strip-components=1"),
+              "chmod 0755 /opt/classfit/scripts/deploy.sh /opt/classfit/scripts/render-env.sh",
+              ("/opt/classfit/scripts/deploy.sh " + ($sha | @sh))
+            ]}')
+          command_id=$(aws ssm send-command \
+            --region "$AWS_REGION" \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --comment "ClassFit ${GITHUB_SHA}" \
+            --parameters "$parameters" \
+            --query 'Command.CommandId' \
+            --output text)
+          printf 'command_id=%s\n' "$command_id" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for deployment result
+        shell: bash
+        env:
+          COMMAND_ID: ${{ steps.command.outputs.command_id }}
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 60); do
+            status=$(aws ssm get-command-invocation \
+              --region "$AWS_REGION" \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$EC2_INSTANCE_ID" \
+              --query Status \
+              --output text 2>/dev/null || true)
+            case "$status" in
+              Success) exit 0 ;;
+              Failed|Cancelled|TimedOut|Cancelling)
+                aws ssm get-command-invocation \
+                  --region "$AWS_REGION" \
+                  --command-id "$COMMAND_ID" \
+                  --instance-id "$EC2_INSTANCE_ID" \
+                  --query '{Status:Status,Details:StatusDetails}'
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "SSM deployment timed out" >&2
+          exit 1
