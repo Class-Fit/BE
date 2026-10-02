@@ -1,39 +1,26 @@
-# =========================
-# 1. Build Stage
-# =========================
-FROM eclipse-temurin:21-jdk AS builder
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /workspace
 
-WORKDIR /app
+COPY gradlew build.gradle settings.gradle ./
+COPY gradle ./gradle
+RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
 
-# Gradle 관련 파일 먼저 복사
-COPY gradlew .
-COPY gradle gradle
-COPY build.gradle .
-COPY settings.gradle .
+COPY src ./src
+RUN ./gradlew bootJar --no-daemon
 
-# 실행 권한 부여
-RUN chmod +x gradlew
-
-# 의존성 캐싱
-RUN ./gradlew dependencies --no-daemon
-
-# 소스 코드 복사
-COPY src src
-
-# Spring Boot 실행 JAR 생성
-RUN ./gradlew bootJar --no-daemon -x test
-
-
-# =========================
-# 2. Runtime Stage
-# =========================
 FROM eclipse-temurin:21-jre
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system classfit \
+    && useradd --system --gid classfit --home-dir /app classfit
 
 WORKDIR /app
+COPY --from=build --chown=classfit:classfit /workspace/build/libs/*.jar app.jar
 
-# 빌드 단계에서 생성한 jar 복사
-COPY --from=builder /app/build/libs/*.jar app.jar
-
+USER classfit
 EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=6 \
+    CMD curl --fail --silent http://localhost:8080/actuator/health || exit 1
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
