@@ -3,15 +3,23 @@ package com.example.classfit.security;
 import com.example.classfit.security.oauth2.CustomOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.savedrequest.NullRequestCache;
 
+import java.util.List;
+
 /** 로컬 백엔드의 세션 기반 카카오 로그인과 API 접근 정책을 구성한다. */
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(WebSecurityProperties.class)
 public class SecurityConfig {
 
     /**
@@ -50,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/admin/courses/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/members/me").authenticated()
                         .anyRequest().denyAll())
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/chat/**")
                         .ignoringRequestMatchers("/api/inbodies/**")
@@ -71,5 +80,18 @@ public class SecurityConfig {
                         .failureHandler((request, response, exception) -> writer.write(response, 401,
                                 "OAUTH_LOGIN_FAILED", "카카오 로그인에 실패했습니다. 다시 시도해주세요.")));
         return http.build();
+    }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource(WebSecurityProperties properties) {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of(properties.frontendOrigin()));
+        configuration.setAllowedMethods(List.of("GET", "POST", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Content-Type", "X-CSRF-TOKEN"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

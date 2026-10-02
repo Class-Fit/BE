@@ -1,5 +1,6 @@
 package com.example.classfit.config;
 
+import com.example.classfit.security.WebSecurityProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.PropertySource;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 class ProductionConfigurationTest {
 
@@ -32,5 +34,12 @@ class ProductionConfigurationTest {
         assertThat(environment.getProperty("public-data.sync.enabled")).isEqualTo("false");
         assertThat(production.getProperty("classfit.web.frontend-origin"))
                 .isEqualTo("${CLASSFIT_FRONTEND_ORIGIN}");
+    }
+
+    @Test
+    void blankFrontendOriginIsRejected() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new WebSecurityProperties("  "))
+                .withMessageContaining("frontend-origin");
     }
 }
