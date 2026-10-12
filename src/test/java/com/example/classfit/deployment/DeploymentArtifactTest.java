@@ -45,12 +45,16 @@ class DeploymentArtifactTest {
     }
 
     @Test
-    void caddyOnlyProxiesApiSubdomainToApplication() throws IOException {
+    void caddyProxiesTheConfiguredApiHostToApplication() throws IOException {
         String caddyfile = read("deploy/Caddyfile");
+        String ec2Compose = read("docker-compose.yml");
+        String ecrCompose = read("deploy/compose.yaml");
 
         assertThat(caddyfile)
-                .contains("api.{$CLASSFIT_DOMAIN}")
+                .contains("{$CLASSFIT_API_HOST}")
                 .contains("reverse_proxy app:8080");
+        assertThat(ec2Compose).contains("CLASSFIT_API_HOST: ${CLASSFIT_API_HOST:-43-201-105-35.sslip.io}");
+        assertThat(ecrCompose).contains("CLASSFIT_API_HOST: api.${CLASSFIT_DOMAIN}");
     }
 
     @Test
