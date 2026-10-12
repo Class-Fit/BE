@@ -1,5 +1,6 @@
 package com.example.classfit.security;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,20 @@ class LogoutTest {
         assertThat(session.isInvalid()).isTrue();
         mvc.perform(get("/api/members/me").session(session))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void authenticatedClientCanFetchCsrfTokenAndLogOut() throws Exception {
+        MockHttpSession session = authenticatedSession();
+        String body = mvc.perform(get("/api/auth/csrf").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.token").isNotEmpty())
+                .andReturn().getResponse().getContentAsString();
+        String token = JsonPath.read(body, "$.data.token");
+
+        mvc.perform(post("/api/auth/logout").session(session).header("X-CSRF-TOKEN", token))
+                .andExpect(status().isNoContent());
+        assertThat(session.isInvalid()).isTrue();
     }
 
     @Test

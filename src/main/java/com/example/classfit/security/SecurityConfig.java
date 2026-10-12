@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/courses/*/favorites").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/courses/*/favorites").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/members/me/favorites").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/admin/courses/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/members/me").authenticated()
                         .anyRequest().denyAll())
