@@ -34,6 +34,8 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
+      SERVER_SERVLET_SESSION_COOKIE_SAME_SITE: none
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "true"
 
     ports:
       - "127.0.0.1:8080:8080"
