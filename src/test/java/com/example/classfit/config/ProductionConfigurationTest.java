@@ -16,6 +16,19 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 class ProductionConfigurationTest {
 
     @Test
+    void defaultComposeProfileUsesHttpsProxyAndFrontendLoginReturn() throws IOException {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("CLASSFIT_FRONTEND_ORIGIN", "https://classfit.example.com");
+        new YamlPropertySourceLoader()
+                .load("application", new ClassPathResource("application.yaml"))
+                .forEach(environment.getPropertySources()::addLast);
+
+        assertThat(environment.getProperty("server.forward-headers-strategy")).isEqualTo("framework");
+        assertThat(environment.getProperty("classfit.web.login-success-url"))
+                .isEqualTo("https://classfit.example.com/courses");
+    }
+
+    @Test
     void productionProfileRequiresExternalSettingsAndUsesSafeDefaults() throws IOException {
         MockEnvironment environment = new MockEnvironment();
         List<PropertySource<?>> sources = new YamlPropertySourceLoader()
