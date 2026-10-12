@@ -20,4 +20,4 @@ server:
 classfit:
   web:
     frontend-origin: https://fe-iota-drab.vercel.app
-    login-success-url: https://fe-iota-drab.vercel.app/courses
+    login-success-url: https://fe-iota-drab.vercel.app/

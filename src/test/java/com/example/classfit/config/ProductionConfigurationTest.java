@@ -25,7 +25,7 @@ class ProductionConfigurationTest {
 
         assertThat(environment.getProperty("server.forward-headers-strategy")).isEqualTo("framework");
         assertThat(environment.getProperty("classfit.web.login-success-url"))
-                .isEqualTo("https://classfit.example.com/courses");
+                .isEqualTo("https://classfit.example.com/");
     }
 
     @Test
@@ -49,7 +49,7 @@ class ProductionConfigurationTest {
         assertThat(production.getProperty("classfit.web.frontend-origin"))
                 .isEqualTo("${CLASSFIT_FRONTEND_ORIGIN}");
         assertThat(production.getProperty("classfit.web.login-success-url"))
-                .isEqualTo("${CLASSFIT_FRONTEND_ORIGIN}/courses");
+                .isEqualTo("${CLASSFIT_FRONTEND_ORIGIN}/");
     }
 
     @Test

@@ -42,7 +42,7 @@ server:
 classfit:
   web:
     frontend-origin: ${CLASSFIT_FRONTEND_ORIGIN:http://localhost:5173}
-    login-success-url: ${CLASSFIT_FRONTEND_ORIGIN:http://localhost:5173}/courses
+    login-success-url: ${CLASSFIT_FRONTEND_ORIGIN:http://localhost:5173}/
 
 public-data:
   sync:

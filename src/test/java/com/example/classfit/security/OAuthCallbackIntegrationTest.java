@@ -50,7 +50,7 @@ class OAuthCallbackIntegrationTest {
         String base = "http://127.0.0.1:" + provider.getAddress().getPort();
         properties.add("spring.security.oauth2.client.provider.kakao.token-uri", () -> base + "/token");
         properties.add("spring.security.oauth2.client.provider.kakao.user-info-uri", () -> base + "/user");
-        properties.add("classfit.web.login-success-url", () -> "https://classfit.vercel.app/courses");
+        properties.add("classfit.web.login-success-url", () -> "https://classfit.vercel.app/");
     }
 
     @BeforeEach
@@ -141,7 +141,7 @@ class OAuthCallbackIntegrationTest {
 
     private MockHttpSession login() throws Exception {
         MvcResult result = callback(begin()).andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("https://classfit.vercel.app/courses")).andReturn();
+                .andExpect(redirectedUrl("https://classfit.vercel.app/")).andReturn();
         return (MockHttpSession) result.getRequest().getSession(false);
     }
 
