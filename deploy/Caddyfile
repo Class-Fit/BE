@@ -1,4 +1,4 @@
-api.{$CLASSFIT_DOMAIN} {
+{$CLASSFIT_API_HOST} {
     encode zstd gzip
     reverse_proxy app:8080
 }

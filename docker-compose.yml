@@ -38,6 +38,24 @@ services:
     ports:
       - "8080:8080"
 
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: classfit-caddy
+    environment:
+      CLASSFIT_API_HOST: ${CLASSFIT_API_HOST:-43-201-105-35.sslip.io}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      - app
+
 
 volumes:
   postgres-data:
+  caddy_data:
+  caddy_config:
