@@ -26,6 +26,13 @@ public class MemberService {
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 
+    @Transactional
+    public Member updateGender(Long memberId, Gender gender) {
+        Member member = findById(memberId);
+        member.updateGender(gender);
+        return member;
+    }
+
     /**
      * 소셜 식별자가 이미 등록되어 있으면 기존 회원을 반환하고,
      * 처음 보는 식별자이면 일반 회원을 생성한다.

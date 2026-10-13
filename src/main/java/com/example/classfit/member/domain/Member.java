@@ -9,6 +9,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -61,6 +63,10 @@ public class Member extends BaseEntity {
         member.gender = gender;
         member.role = MemberRole.USER;
         return member;
+    }
+
+    public void updateGender(Gender gender) {
+        this.gender = Objects.requireNonNull(gender, "gender");
     }
 
 }
