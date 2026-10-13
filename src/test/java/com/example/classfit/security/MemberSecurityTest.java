@@ -70,6 +70,35 @@ class MemberSecurityTest {
                 .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
     }
 
+    @Test
+    void inBodyEndpointsRequireLoginAndIgnoreSuppliedMemberId() throws Exception {
+        mvc.perform(get("/api/inbodies/latest").param("memberId", "1"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/inbodies/analyze"))
+                .andExpect(status().isUnauthorized());
+
+        LoginMember principal = savedLoginMember("inbody-owner");
+        Member other = members.saveAndFlush(Member.createOAuthMember(
+                OAuthProvider.KAKAO, "inbody-other", "다른 회원", null, null));
+        mvc.perform(post("/api/inbodies")
+                        .param("memberId", other.getId().toString())
+                        .with(oauth2Login().oauth2User(principal))
+                        .contentType("application/json")
+                        .content("""
+                                {"heightCm":170,"weightKg":65,"bodyFatPercentage":20,
+                                 "skeletalMuscleMassKg":28,"bodyFatMassKg":13,"bmi":22.5}
+                                """))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/inbodies/latest")
+                        .param("memberId", other.getId().toString())
+                        .with(oauth2Login().oauth2User(principal)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.weightKg").value(65));
+        mvc.perform(get("/api/inbodies/latest")
+                        .with(oauth2Login().oauth2User(LoginMember.from(other))))
+                .andExpect(status().isNotFound());
+    }
+
     /** 메인 화면 공개 데이터는 로그인하지 않은 사용자도 조회할 수 있는지 검증한다. */
     @Test
     void anonymousUserCanReadHome() throws Exception {
