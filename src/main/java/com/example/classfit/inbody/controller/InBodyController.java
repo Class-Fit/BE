@@ -5,10 +5,13 @@ import com.example.classfit.inbody.dto.req.InBodyCreateReq;
 import com.example.classfit.inbody.dto.res.InBodyAnalyzeRes;
 import com.example.classfit.inbody.dto.res.InBodyCreateRes;
 import com.example.classfit.inbody.service.InBodyService;
+import com.example.classfit.security.LoginMember;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,16 +26,16 @@ public class InBodyController {
 
     @PostMapping
     public InBodyCreateRes createInBody(
-            @RequestParam Long memberId,
-            @RequestBody InBodyCreateReq request
+            @AuthenticationPrincipal LoginMember loginMember,
+            @Valid @RequestBody InBodyCreateReq request
     ) {
-        return inBodyService.createInBody(memberId, request);
+        return inBodyService.createInBody(loginMember.getMemberId(), request);
     }
 
 
     @GetMapping
     public PageResponse<InBodyCreateRes> getInBodies(
-            @RequestParam Long memberId,
+            @AuthenticationPrincipal LoginMember loginMember,
 
             @RequestParam(defaultValue = "0")
             @Min(value = 0, message = "page는 0 이상이어야 합니다.")
@@ -43,7 +46,7 @@ public class InBodyController {
             int size
     ) {
         return inBodyService.getInBodies(
-                memberId,
+                loginMember.getMemberId(),
                 page,
                 size
         );
@@ -51,9 +54,9 @@ public class InBodyController {
 
     @GetMapping("/latest")
     public InBodyCreateRes getLatestInBody(
-            @RequestParam Long memberId
+            @AuthenticationPrincipal LoginMember loginMember
     ) {
-        return inBodyService.getLatestInBody(memberId);
+        return inBodyService.getLatestInBody(loginMember.getMemberId());
     }
 
     @PostMapping(
