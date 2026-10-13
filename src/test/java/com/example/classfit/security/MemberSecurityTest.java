@@ -20,6 +20,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** 실제 보안 필터와 DB를 사용해 서비스 회원 조회 및 API 접근 정책을 검증한다. */
@@ -159,6 +160,39 @@ class MemberSecurityTest {
                 .andExpect(jsonPath("$.data.role").value("USER"))
                 .andExpect(jsonPath("$.data.providerId").doesNotExist())
                 .andExpect(jsonPath("$.data.attributes").doesNotExist());
+    }
+
+    @Test
+    void authenticatedMemberCanSaveOwnGender() throws Exception {
+        Member member = members.saveAndFlush(Member.createOAuthMember(
+                OAuthProvider.KAKAO, "gender-owner", "회원", null, null));
+        LoginMember principal = LoginMember.from(member);
+
+        mvc.perform(patch("/api/members/me/gender")
+                        .with(oauth2Login().oauth2User(principal))
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{\"gender\":\"FEMALE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.gender").value("FEMALE"));
+        mvc.perform(get("/api/members/me").with(oauth2Login().oauth2User(principal)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.gender").value("FEMALE"));
+    }
+
+    @Test
+    void genderUpdateRequiresLoginAndCsrfToken() throws Exception {
+        LoginMember principal = savedLoginMember("gender-csrf");
+        mvc.perform(patch("/api/members/me/gender")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{\"gender\":\"MALE\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(patch("/api/members/me/gender")
+                        .with(oauth2Login().oauth2User(principal))
+                        .contentType("application/json")
+                        .content("{\"gender\":\"MALE\"}"))
+                .andExpect(status().isForbidden());
     }
 
     /** 인증 정보에 남아 있는 회원이 DB에서 삭제되면 회원 없음 오류를 반환하는지 검증한다. */
